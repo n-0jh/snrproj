@@ -1,0 +1,8 @@
+[package]
+name = "mock_lora_forc3"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+byteorder = "1.5" # big_endian format
+rand = "0.8" # mock values for our sensor

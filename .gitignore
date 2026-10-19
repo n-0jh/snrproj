@@ -1,0 +1,27 @@
+# open C3
+cosmos-project/data/
+cosmos-project/outputs/
+cosmos-project/logs/
+cosmos-project/.env
+cosmos-project/_build/
+cosmos-project/public/
+cosmos-project/*.gem
+cosmos-project/plugins/*.gem
+
+
+
+
+
+
+
+# rust (cargo)
+mock_lora_sim/target/
+**/*.rs.bk
+
+
+
+# IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,335 @@
+{
+  "name": "openc3-cosmos-demo-7.4.1.gem__0",
+  "variables": {
+    "inst_target_name": {
+      "value": "INST",
+      "description": "Name for the primary INST target (leave blank to exclude)"
+    },
+    "inst2_target_name": {
+      "value": "INST2",
+      "description": "Name for the secondary INST2 target (leave blank to exclude)"
+    },
+    "inst2_stored": {
+      "value": "false",
+      "description": "Mark INST2 telemetry as stored (demonstrates STORED_LIMITS_MODE)",
+      "options": [
+        {
+          "value": "false",
+          "text": "No"
+        },
+        {
+          "value": "true",
+          "text": "Yes"
+        }
+      ]
+    },
+    "example_target_name": {
+      "value": "EXAMPLE",
+      "description": "Name for the EXAMPLE target (leave blank to exclude)"
+    },
+    "templated_target_name": {
+      "value": "TEMPLATED",
+      "description": "Name for the TEMPLATED target (leave blank to exclude)"
+    },
+    "system_target_name": {
+      "value": "SYSTEM",
+      "description": "Name for the SYSTEM target (leave blank to exclude)"
+    },
+    "inst_int_name": {
+      "value": "INST_INT",
+      "description": "Name for the INST interface"
+    },
+    "inst_router_name": {
+      "value": "INST_ROUTER",
+      "description": "Name for the INST router"
+    },
+    "inst2_int_name": {
+      "value": "INST2_INT",
+      "description": "Name for the INST2 interface"
+    },
+    "example_int_name": {
+      "value": "EXAMPLE_INT",
+      "description": "Name for the EXAMPLE interface"
+    },
+    "templated_int_name": {
+      "value": "TEMPLATED_INT",
+      "description": "Name for the TEMPLATED interface"
+    },
+    "demo_tool_name": {
+      "value": "Demo",
+      "description": "Name shown in the nav bar for the Demo tool"
+    },
+    "example_microservice_name": {
+      "value": "openc3-example",
+      "description": "Name for the EXAMPLE microservice"
+    },
+    "templated_microservice_name": {
+      "value": "openc3-templated",
+      "description": "Name for the TEMPLATED microservice"
+    },
+    "example_port": {
+      "value": "9999",
+      "description": "Port for EXAMPLE target connection"
+    },
+    "templated_port": {
+      "value": "5025",
+      "description": "Port for TEMPLATED target connection"
+    },
+    "inst_router_port": {
+      "value": "7779",
+      "description": "Port for INST router"
+    },
+    "log_retain_time": {
+      "value": "172800",
+      "description": "Raw log retention time in seconds (default: 48 hours)",
+      "options": [
+        {
+          "value": "86400",
+          "text": "24 hours"
+        },
+        {
+          "value": "172800",
+          "text": "48 hours"
+        },
+        {
+          "value": "604800",
+          "text": "1 week"
+        },
+        {
+          "value": "2592000",
+          "text": "30 days"
+        }
+      ]
+    },
+    "use_throughput_server": {
+      "value": "false",
+      "description": "Use external throughput server instead of built-in simulator",
+      "options": [
+        {
+          "value": "false",
+          "text": "No (use simulator)"
+        },
+        {
+          "value": "true",
+          "text": "Yes (use throughput server)"
+        }
+      ]
+    },
+    "throughput_server_host": {
+      "value": "host.docker.internal",
+      "description": "Hostname for the throughput server"
+    },
+    "inst_throughput_port": {
+      "value": "7778",
+      "description": "Port for INST throughput server connection"
+    },
+    "inst2_throughput_port": {
+      "value": "7780",
+      "description": "Port for INST2 throughput server connection"
+    }
+  },
+  "plugin_txt_lines": [
+    "# Note: This plugin includes 4 targets in one plugin to make it easy to install",
+    "# the OpenC3 demo with one plugin.  Generally it is better to only have one",
+    "# target per plugin",
+    "",
+    "VARIABLE inst_target_name INST",
+    "  VARIABLE_DESCRIPTION \"Name for the primary INST target (leave blank to exclude)\"",
+    "VARIABLE inst2_target_name INST2",
+    "  VARIABLE_DESCRIPTION \"Name for the secondary INST2 target (leave blank to exclude)\"",
+    "VARIABLE inst2_stored false",
+    "  VARIABLE_DESCRIPTION \"Mark INST2 telemetry as stored (demonstrates STORED_LIMITS_MODE)\"",
+    "  VARIABLE_STATE \"No\" false",
+    "  VARIABLE_STATE \"Yes\" true",
+    "VARIABLE example_target_name EXAMPLE",
+    "  VARIABLE_DESCRIPTION \"Name for the EXAMPLE target (leave blank to exclude)\"",
+    "VARIABLE templated_target_name TEMPLATED",
+    "  VARIABLE_DESCRIPTION \"Name for the TEMPLATED target (leave blank to exclude)\"",
+    "VARIABLE system_target_name SYSTEM",
+    "  VARIABLE_DESCRIPTION \"Name for the SYSTEM target (leave blank to exclude)\"",
+    "VARIABLE inst_int_name INST_INT",
+    "  VARIABLE_DESCRIPTION \"Name for the INST interface\"",
+    "VARIABLE inst_router_name INST_ROUTER",
+    "  VARIABLE_DESCRIPTION \"Name for the INST router\"",
+    "VARIABLE inst2_int_name INST2_INT",
+    "  VARIABLE_DESCRIPTION \"Name for the INST2 interface\"",
+    "VARIABLE example_int_name EXAMPLE_INT",
+    "  VARIABLE_DESCRIPTION \"Name for the EXAMPLE interface\"",
+    "VARIABLE templated_int_name TEMPLATED_INT",
+    "  VARIABLE_DESCRIPTION \"Name for the TEMPLATED interface\"",
+    "VARIABLE demo_tool_name Demo",
+    "  VARIABLE_DESCRIPTION \"Name shown in the nav bar for the Demo tool\"",
+    "VARIABLE example_microservice_name openc3-example",
+    "  VARIABLE_DESCRIPTION \"Name for the EXAMPLE microservice\"",
+    "VARIABLE templated_microservice_name openc3-templated",
+    "  VARIABLE_DESCRIPTION \"Name for the TEMPLATED microservice\"",
+    "VARIABLE example_port 9999",
+    "  VARIABLE_DESCRIPTION \"Port for EXAMPLE target connection\"",
+    "VARIABLE templated_port 5025",
+    "  VARIABLE_DESCRIPTION \"Port for TEMPLATED target connection\"",
+    "VARIABLE inst_router_port 7779",
+    "  VARIABLE_DESCRIPTION \"Port for INST router\"",
+    "VARIABLE log_retain_time 172800",
+    "  VARIABLE_DESCRIPTION \"Raw log retention time in seconds (default: 48 hours)\"",
+    "  VARIABLE_STATE \"24 hours\" 86400",
+    "  VARIABLE_STATE \"48 hours\" 172800",
+    "  VARIABLE_STATE \"1 week\" 604800",
+    "  VARIABLE_STATE \"30 days\" 2592000",
+    "",
+    "### Throughput Server Configuration ###",
+    "# The throughput server can be used to test the maximum command and telemetry throughput",
+    "# To use it enable the use_throughput_server variable and start the throughput server separately",
+    "# From the base of the cosmos directory, in a separate terminal run:",
+    "#   cd examples/throughput_server/",
+    "#   python throughput_server.py",
+    "# Once the DEMO has been installed (or re-installed with use_throughput_server enabled) it will connect",
+    "# to the throughput server instead of using the built-in simulator. You should see a single packet.",
+    "# Run throughput_test.rb to test INST and throughput_test.py to test INST2 throughput.",
+    "VARIABLE use_throughput_server false",
+    "  VARIABLE_DESCRIPTION \"Use external throughput server instead of built-in simulator\"",
+    "  VARIABLE_STATE \"No (use simulator)\" false",
+    "  VARIABLE_STATE \"Yes (use throughput server)\" true",
+    "VARIABLE throughput_server_host host.docker.internal",
+    "  VARIABLE_DESCRIPTION \"Hostname for the throughput server\"",
+    "VARIABLE inst_throughput_port 7778",
+    "  VARIABLE_DESCRIPTION \"Port for INST throughput server connection\"",
+    "VARIABLE inst2_throughput_port 7780",
+    "  VARIABLE_DESCRIPTION \"Port for INST2 throughput server connection\"",
+    "",
+    "<% include_inst = (inst_target_name.to_s.strip.length > 0) %>",
+    "<% include_inst2 = (inst2_target_name.to_s.strip.length > 0) %>",
+    "<% include_example = (example_target_name.to_s.strip.length > 0) %>",
+    "<% include_templated = (templated_target_name.to_s.strip.length > 0) %>",
+    "<% include_system = (system_target_name.to_s.strip.length > 0) %>",
+    "<% include_inst_int = (inst_int_name.to_s.strip.length > 0) %>",
+    "<% include_inst_router = (inst_router_name.to_s.strip.length > 0) %>",
+    "<% include_inst2_int = (inst2_int_name.to_s.strip.length > 0) %>",
+    "<% include_example_int = (example_int_name.to_s.strip.length > 0) %>",
+    "<% include_templated_int = (templated_int_name.to_s.strip.length > 0) %>",
+    "<% include_example_microservice = (example_microservice_name.to_s.strip.length > 0) %>",
+    "<% include_templated_microservice = (templated_microservice_name.to_s.strip.length > 0) %>",
+    "",
+    "<% if include_inst %>",
+    "  TARGET INST <%= inst_target_name %>",
+    "    # If we're in the CI pipeline shorten the log file creation time",
+    "    <% if ENV[\"CI\"] %>",
+    "      TLM_LOG_CYCLE_TIME 60",
+    "    <% else %>",
+    "      TLM_LOG_CYCLE_TIME 300",
+    "    <% end %>",
+    "    LOG_RETAIN_TIME <%= log_retain_time %>",
+    "<% end %>",
+    "",
+    "<% if include_inst2 %>",
+    "  TARGET INST2 <%= inst2_target_name %>",
+    "    LOG_RETAIN_TIME <%= log_retain_time %>",
+    "    TLM_LOG_CYCLE_TIME 600",
+    "    STORED_LIMITS_MODE DISABLE",
+    "<% end %>",
+    "",
+    "<% if include_example %>",
+    "  TARGET EXAMPLE <%= example_target_name %>",
+    "    LOG_RETAIN_TIME <%= log_retain_time %>",
+    "<% end %>",
+    "",
+    "<% if include_templated %>",
+    "  TARGET TEMPLATED <%= templated_target_name %>",
+    "    LOG_RETAIN_TIME <%= log_retain_time %>",
+    "<% end %>",
+    "",
+    "<% if include_system %>",
+    "  TARGET SYSTEM <%= system_target_name %>",
+    "<% end %>",
+    "",
+    "<% if include_inst and include_inst_int %>",
+    "  <% if use_throughput_server.to_s == \"true\" %>",
+    "    # Connect to external throughput server using TCP/IP with LengthProtocol",
+    "    # LengthProtocol params: bit_offset=32, bit_size=16, len_offset=7, bytes_per_count=1",
+    "    INTERFACE <%= inst_int_name %> tcpip_client_interface.rb <%= throughput_server_host %> <%= inst_throughput_port %> <%= inst_throughput_port %> 10.0 nil LENGTH 32 16 7 1 BIG_ENDIAN 0 nil nil true",
+    "      MAP_TARGET <%= inst_target_name %>",
+    "  <% else %>",
+    "    INTERFACE <%= inst_int_name %> simulated_target_interface.rb sim_inst.rb",
+    "      MAP_TARGET <%= inst_target_name %>",
+    "  <% end %>",
+    "<% end %>",
+    "",
+    "<% if include_inst2 and include_inst2_int %>",
+    "  <% if use_throughput_server.to_s == \"true\" %>",
+    "    # Connect to external throughput server using Python TCP/IP with LengthProtocol",
+    "    # Must use Python interface for INST2 because target uses Python conversions",
+    "    # LengthProtocol params: bit_offset=32, bit_size=16, len_offset=7, bytes_per_count=1",
+    "    INTERFACE <%= inst2_int_name %> openc3/interfaces/tcpip_client_interface.py <%= throughput_server_host %> <%= inst2_throughput_port %> <%= inst2_throughput_port %> 10.0 None LENGTH 32 16 7 1 BIG_ENDIAN 0 None None True",
+    "      MAP_TARGET <%= inst2_target_name %>",
+    "  <% else %>",
+    "    INTERFACE <%= inst2_int_name %> sim_inst_interface.py sim_inst.py <%= inst2_stored %>",
+    "      MAP_TARGET <%= inst2_target_name %>",
+    "  <% end %>",
+    "<% end %>",
+    "",
+    "<% if include_example and include_example_int %>",
+    "  # This expression builds the correct hostname for Core or Enterprise in Kubernetes",
+    "  <% example_host = ENV['KUBERNETES_SERVICE_HOST'] ? \"#{scope}-user-#{example_microservice_name.downcase.gsub('__', '-').gsub('_', '-')}-service\" : \"openc3-operator\" %>",
+    "  INTERFACE <%= example_int_name %> example_interface.rb <%= example_host %> <%= example_port %>",
+    "    MAP_TARGET <%= example_target_name %>",
+    "    DONT_CONNECT",
+    "    # Override the default log time of 600",
+    "    LOG_STREAM 60",
+    "    OPTION CONNECT_CMD LOG \"<%= example_target_name %> START\"",
+    "    # Add encryption protocol with shared key (must match example_target.rb)",
+    "    PROTOCOL READ_WRITE encryption_protocol.rb deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "<% end %>",
+    "",
+    "<% if include_templated and include_templated_int %>",
+    "  # This expression builds the correct hostname for Core or Enterprise in Kubernetes",
+    "  <% templated_host = ENV['KUBERNETES_SERVICE_HOST'] ? \"#{scope}-user-#{templated_microservice_name.downcase.gsub('__', '-').gsub('_', '-')}-service\" : \"openc3-operator\" %>",
+    "  INTERFACE <%= templated_int_name %> templated_interface.rb <%= templated_host %> <%= templated_port %> <%= templated_port %> 5.0 nil TEMPLATE 0xA 0xA",
+    "    MAP_TARGET <%= templated_target_name %>",
+    "    DONT_CONNECT",
+    "<% end %>",
+    "",
+    "<% if include_inst and include_inst_router %>",
+    "  ROUTER <%= inst_router_name %> tcpip_server_interface.rb <%= inst_router_port %> <%= inst_router_port %> 10.0 nil PREIDENTIFIED",
+    "    MAP_TARGET <%= inst_target_name %>",
+    "<% end %>",
+    "",
+    "<% if include_example_microservice %>",
+    "  MICROSERVICE EXAMPLE <%= example_microservice_name %>",
+    "    CMD ruby example_target.rb",
+    "    TARGET_NAME <%= example_target_name %>",
+    "    PORT <%= example_port %>",
+    "<% end %>",
+    "",
+    "<% if include_templated_microservice %>",
+    "  MICROSERVICE TEMPLATED <%= templated_microservice_name %>",
+    "    CMD ruby scpi_target.rb",
+    "    TARGET_NAME <%= templated_target_name %>",
+    "    PORT <%= templated_port %>",
+    "<% end %>",
+    "",
+    "WIDGET BIG",
+    "WIDGET HELLOWORLD",
+    "WIDGET DATAVIEWERTIME \"Current Time\"",
+    "WIDGET DATAVIEWERQUATERNION",
+    "",
+    "SCRIPT_ENGINE .puts puts_script_engine.rb",
+    "SCRIPT_ENGINE .print print_script_engine.py"
+  ],
+  "minimum_cosmos_version": "6.10.4",
+  "needs_dependencies": true,
+  "store_plugin_id": null,
+  "store_version_id": null,
+  "title": "Demo",
+  "description": "The demo plugin that comes with a fresh COSMOS install",
+  "keywords": [
+    "demo",
+    "training",
+    "testing"
+  ],
+  "licenses": [
+    "OpenC3"
+  ],
+  "homepage": "https://github.com/OpenC3/cosmos",
+  "repository": null,
+  "img_path": "gems/openc3-cosmos-demo-7.4.1/public/store_img.png",
+  "updated_at": 1792435703752941295
+}
