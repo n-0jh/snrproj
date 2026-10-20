@@ -1,0 +1,4 @@
+TELEMETRY RASCAL HEALTH BIG_ENDIAN "test packet: a counter"
+  # Keyword      Name    BitSize Type  ID Description
+  APPEND_ID_ITEM PKT_ID  8       UINT  1  "Packet ID"
+  APPEND_ITEM    COUNTER 16      UINT     "Counter, +1 per packet"

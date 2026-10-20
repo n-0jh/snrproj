@@ -25,3 +25,4 @@ mock_lora_sim/target/
 Thumbs.db
 .vscode/
 .idea/
+cosmos-project/plugins/DEFAULT/openc3-cosmos-rascal/
