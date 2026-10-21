@@ -1,6 +1,4 @@
 // EPS telemetry generator
-// Rust port of orbitSim.py + telemetryGen.py
-// Simulates one LEO orbit, logs every frame to a CSV, and sends them to COSMOS over UDP.
 // Built for LEO; change the constants for other orbits.
 
 use rand::Rng;                          // lets us pass the random number generator around
