@@ -1,7 +1,7 @@
 # LANGUAGE ruby
 
 VARIABLE rascal_target_name RASCAL
-VARIABLE rascal_cmd_host 127.0.0.1
+VARIABLE rascal_cmd_host 192.168.65.254
 VARIABLE rascal_cmd_port 6901
 VARIABLE rascal_tlm_port 6900
 
