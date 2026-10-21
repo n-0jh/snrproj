@@ -333,3 +333,9 @@
 #       - "openc3-test-v:/data/test"
 # volumes:
 #   openc3-test-v: {}
+
+# telemetry test forward our 6900 port into operator container
+services:
+  openc3-operator:
+    ports:
+      - "127.0.0.1:6900:6900/udp"
