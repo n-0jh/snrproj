@@ -120,4 +120,4 @@ The receiver listens for UDP command packets on port 6901.
 
 The Rust program should display:
 
-NOOP command received!
+<Command_Name> command received!
