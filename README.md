@@ -78,3 +78,21 @@ port | use
 6900/udp | telemetry into OpenC3
 6901/udp | commands out of OpenC3 
 7799-7814/udp | reserved by OpenC3
+
+## UDP Command Uplink
+OpenC3 COSMOS acts as the ground station, while uplink_listener.rs simulates the CubeSat's command receiver.
+The RASCAL plugin is configured in:
+
+```cosmos-project/plugins/openc3-cosmos-rascal/plugin.txt```
+
+The following variables define the UDP command destination and telemetry port:
+```
+VARIABLE rascal_cmd_host host.docker.internal
+VARIABLE rascal_cmd_port 6901
+VARIABLE rascal_tlm_port 6900
+```
+Because COSMOS runs in Docker while the Rust simulator runs on the host computer, the command destination must point to the host rather than the container's loopback address.
+
+On some Docker Desktop configurations, hostname resolution may cause an address-family compatibility issue. If the RASCAL interface fails to connect, determine the host's IPv4 address using:
+```docker exec cosmos-project-openc3-cosmos-cmd-tlm-api-1 getent ahostsv4 host.docker.internal``` in the terminal
+Use the returned IPv4 address as the rascal_cmd_host value during plugin installation. 
