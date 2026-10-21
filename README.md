@@ -94,5 +94,30 @@ VARIABLE rascal_tlm_port 6900
 Because COSMOS runs in Docker while the Rust simulator runs on the host computer, the command destination must point to the host rather than the container's loopback address.
 
 On some Docker Desktop configurations, hostname resolution may cause an address-family compatibility issue. If the RASCAL interface fails to connect, determine the host's IPv4 address using:
-```docker exec cosmos-project-openc3-cosmos-cmd-tlm-api-1 getent ahostsv4 host.docker.internal``` in the terminal
+```docker exec cosmos-project-openc3-cosmos-cmd-tlm-api-1 getent ahostsv4 host.docker.internal``` in the terminal.
+
 Use the returned IPv4 address as the rascal_cmd_host value during plugin installation. 
+
+## Starting the UDP Command Receiver
+
+Navigate to the Rust project:
+
+```cd mock_lora_forc3```
+
+Run the uplink listener:
+
+```cargo run --release --bin uplink_listener```
+
+The receiver listens for UDP command packets on port 6901.
+
+## Testing Command Uplink
+
+1. Start OpenC3 COSMOS and verify that RASCAL_INT is connected.
+2. Start the Rust UDP listener.
+3. Open the COSMOS Command Sender.
+4. Select target RASCAL and command.
+5. Send the command.
+
+The Rust program should display:
+
+NOOP command received!
