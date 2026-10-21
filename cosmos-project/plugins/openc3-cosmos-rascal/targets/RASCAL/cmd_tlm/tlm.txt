@@ -2,3 +2,19 @@ TELEMETRY RASCAL HEALTH BIG_ENDIAN "test packet: a counter"
   # Keyword      Name    BitSize Type  ID Description
   APPEND_ID_ITEM PKT_ID  8       UINT  1  "Packet ID"
   APPEND_ITEM    COUNTER 16      UINT     "Counter, +1 per packet"
+
+  TELEMETRY RASCAL EPS BIG_ENDIAN "EPS housekeeping from eps_gen"
+  # Keyword      Name          BitSize Type  ID Description
+  APPEND_ID_ITEM PKT_ID        8       UINT  2  "Packet ID"
+  APPEND_ITEM    COUNTER       16      UINT     "Counter, +1 per packet"
+  APPEND_ITEM    SIM_TIME      32      UINT     "Simulated seconds since epoch"
+    UNITS seconds s
+  APPEND_ITEM    BATT_VOLTAGE  16      UINT     "Battery pack voltage"
+    UNITS millivolts mV
+  APPEND_ITEM    BATT_CURRENT  16      INT      "Battery current, + charging / - discharging"
+    UNITS milliamps mA
+  APPEND_ITEM    BATT_TEMP     16      INT      "Battery temperature"
+    POLY_READ_CONVERSION 0 0.01
+    UNITS celsius C
+  APPEND_ITEM    SOLAR_CURRENT 16      INT      "Solar array current"
+    UNITS milliamps mA
