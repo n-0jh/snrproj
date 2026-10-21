@@ -48,6 +48,8 @@ cd plugins\openc3-cosmos-rascal
 ```
 This creates `openc3-cosmos-rascal-1.0.0.gem` in that folder.
  
+NOTE: Upon new VERSION1.x.x, click "UPDATE" in OpenC3 under Admin>Installed plugins.
+
 2. in OpenC3 go to Admin > Plugins > Install from file choose `.gem`, check `rascal_tlm_port`is **6900** and `rascal_cmd_port` is **6901** then click **Install**
 
 3. Rascal should now be viewable in the Installed Plugins list
