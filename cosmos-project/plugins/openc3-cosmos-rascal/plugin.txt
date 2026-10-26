@@ -1,11 +1,16 @@
 # LANGUAGE ruby
+# udp_interface.rb --> comes from OpenC3 framework 
+#secur_link_protocol --> protocol written by us( RASCAL TEAM ) located \snrproj\cosmos-project\plugins\openc3-cosmos-rascal\targets\RASCAL\lib
+#attach our custom protocol to the interface for both directions of data flow.
+
 
 VARIABLE rascal_target_name RASCAL
-VARIABLE rascal_cmd_host 127.0.0.1
+VARIABLE rascal_cmd_host host.docker.internal
 VARIABLE rascal_cmd_port 6901
 VARIABLE rascal_tlm_port 6900
 
 TARGET RASCAL <%= rascal_target_name %>
 
 INTERFACE <%= rascal_target_name %>_INT udp_interface.rb <%= rascal_cmd_host %> <%= rascal_cmd_port %> <%= rascal_tlm_port %>
+  PROTOCOL READ_WRITE secure_link_protocol.rb    
   MAP_TARGET <%= rascal_target_name %>

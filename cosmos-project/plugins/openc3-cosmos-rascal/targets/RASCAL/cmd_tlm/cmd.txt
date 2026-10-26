@@ -1,2 +1,4 @@
 COMMAND RASCAL NOOP BIG_ENDIAN "No-op, used to check the command link YET"
-  APPEND_ID_PARAMETER CMD_ID 8 UINT 1 1 1 "Command ID"
+  # Keyword              Name      BitSize  Type    Min   Max  Default  Description 
+  APPEND_ID_PARAMETER   CMD_ID      8       UINT     1     1    1       "Command ID"
+  APPEND_PARAMETER      SEQ_NUM     8       UINT     0     255  0       "Command sequence number"
