@@ -70,6 +70,30 @@ to check it is arriving, open **CmdTlmServer**:
 * **Interfaces** tab: `RASCAL_INT` should be CONNECTED and its packet count should go up
 * **Packets** tab: `RASCAL HEALTH` received count should go up
 
+
+## view the EPS graphs
+The RASCAL plugin includes an **EPS_GRAPHS** screen (`targets/RASCAL/screens/eps_graphs.txt`) with live graphs of battery voltage, battery + solar current and battery temperature. EPS values also have limits in `tlm.txt`, so they turn yellow/red when out of range.
+
+If you installed the plugin before this screen was added, rebuild and upgrade it once:
+
+1. pull the latest main: `git pull origin main`
+2. rebuild with a higher version, from `cosmos-project/plugins/openc3-cosmos-rascal`:
+   * **linux/mac** `../../openc3.sh cli rake build VERSION=1.0.1`
+   * **windows** `..\..\openc3.bat cli rake build VERSION=1.0.1`
+3. in OpenC3 go to Admin > Plugins, click **Upgrade** on openc3-cosmos-rascal and choose the new `.gem`
+
+To view the graphs:
+
+1. run the EPS generator
+```bash
+cd genData/eps_gen
+cargo run --release
+```
+2. open **Telemetry Viewer**, select target **RASCAL**, screen **EPS_GRAPHS**, click **Show**
+
+eps_gen sends one 90 minute orbit in 90 seconds (1 packet per second = 60 s of orbit), then stops. Run it again to replay.
+
+
 ## packet format
 big-endian, once per second.
 NOTE: must match what is inside of 'mock_lore_forc3/src/main.rs` and `cosmos-project/plugins/openc3-cosmos-rascal-targets/RASCAL/cmd_tlm/tlm.txt`

@@ -1,0 +1,54 @@
+# RASCAL EPS graphs screen
+# Open in COSMOS: Telemetry Viewer > target RASCAL > screen EPS_GRAPHS
+# Data comes from genData/eps_gen (EPS packet, PKT_ID 2), see cmd_tlm/tlm.txt
+# X axis is ground receive time: eps_gen sends 1 packet per real second,
+# each packet = 60 s of simulated orbit, so ~90 s on screen = one 90 min orbit.
+
+SCREEN AUTO AUTO 1.0
+
+TITLE "RASCAL Power System (EPS)"
+
+# ---------- Latest values (turn yellow/red when out of limits) ----------
+HORIZONTALBOX "Latest values"
+  LABELVALUE RASCAL EPS BATT_VOLTAGE FORMATTED 10
+  LABELVALUE RASCAL EPS BATT_CURRENT FORMATTED 10
+  LABELVALUE RASCAL EPS SOLAR_CURRENT FORMATTED 10
+  LABELVALUE RASCAL EPS BATT_TEMP FORMATTED 10
+END
+
+# ---------- Graphs, row 1 ----------
+HORIZONTAL
+  VERTICALBOX "Battery voltage (mV)"
+    LINEGRAPH RASCAL EPS BATT_VOLTAGE
+      SETTING HISTORY 3m         # load the last 3 min when the screen opens
+      SETTING SECONDSGRAPHED 120 # show a 2 min window (> one demo orbit)
+      SETTING POINTSSAVED 2000
+      SETTING SIZE 520 240
+  END
+  VERTICALBOX "Currents (mA): battery + charging / - discharging"
+    LINEGRAPH RASCAL EPS BATT_CURRENT
+      SETTING ITEM RASCAL EPS SOLAR_CURRENT # second line on the same graph
+      SETTING HISTORY 3m
+      SETTING SECONDSGRAPHED 120
+      SETTING POINTSSAVED 2000
+      SETTING SIZE 520 240
+  END
+END
+
+# ---------- Graphs, row 2 ----------
+HORIZONTAL
+  VERTICALBOX "Battery temperature (C)"
+    LINEGRAPH RASCAL EPS BATT_TEMP
+      SETTING HISTORY 3m
+      SETTING SECONDSGRAPHED 120
+      SETTING POINTSSAVED 2000
+      SETTING SIZE 520 240
+  END
+  VERTICALBOX "Downlink"
+    LABELVALUE RASCAL EPS COUNTER
+    LABELVALUE RASCAL EPS SIM_TIME FORMATTED 10
+    LABELVALUE RASCAL EPS RECEIVED_COUNT
+    LABELVALUE RASCAL EPS RECEIVED_TIMEFORMATTED CONVERTED 26
+    LABELVALUE RASCAL HEALTH COUNTER
+  END
+END

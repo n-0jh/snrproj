@@ -3,7 +3,7 @@ TELEMETRY RASCAL HEALTH BIG_ENDIAN "test packet: a counter"
   APPEND_ID_ITEM PKT_ID  8       UINT  1  "Packet ID"
   APPEND_ITEM    COUNTER 16      UINT     "Counter, +1 per packet"
 
-  TELEMETRY RASCAL EPS BIG_ENDIAN "EPS housekeeping from eps_gen"
+TELEMETRY RASCAL EPS BIG_ENDIAN "EPS housekeeping from eps_gen"
   # Keyword      Name          BitSize Type  ID Description
   APPEND_ID_ITEM PKT_ID        8       UINT  2  "Packet ID"
   APPEND_ITEM    COUNTER       16      UINT     "Counter, +1 per packet"
@@ -11,13 +11,22 @@ TELEMETRY RASCAL HEALTH BIG_ENDIAN "test packet: a counter"
     UNITS seconds s
   APPEND_ITEM    BATT_VOLTAGE  16      UINT     "Battery pack voltage"
     UNITS millivolts mV
+    # LIMITS set persistence state red_low yellow_low yellow_high red_high
+    # nominal 6800-8400 mV (eps_gen V_EMPTY_MV / V_FULL_MV)
+    LIMITS DEFAULT 1 ENABLED 6700 6900 8300 8500
   APPEND_ITEM    BATT_CURRENT  16      INT      "Battery current, + charging / - discharging"
     UNITS milliamps mA
+    # nominal -500 to 800 mA (eps_gen EPS_FIELDS)
+    LIMITS DEFAULT 1 ENABLED -700 -550 850 1000
   APPEND_ITEM    BATT_TEMP     16      INT      "Battery temperature"
     POLY_READ_CONVERSION 0 0.01
     UNITS celsius C
+    # nominal 0-40 C, limits apply to the converted value
+    LIMITS DEFAULT 1 ENABLED 0 5 35 40
   APPEND_ITEM    SOLAR_CURRENT 16      INT      "Solar array current"
     UNITS milliamps mA
+    # nominal 0-1200 mA, small negative values are noise during eclipse
+    LIMITS DEFAULT 1 ENABLED -100 -50 1250 1350
 
 
 TELEMETRY RASCAL ACK BIG_ENDIAN "Acknowledgment of a received command"
