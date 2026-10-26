@@ -1,5 +1,5 @@
 // EPS telemetry generator
-// Built for LEO; change the constants for other orbits.
+// Simulates one LEO orbit, logs every frame to a CSV, and sends them to COSMOS over UDP.
 
 use rand::Rng;                          // lets us pass the random number generator around
 use rand_distr::{Distribution, Normal}; // bell-curve (Gaussian) random numbers
@@ -118,7 +118,7 @@ fn orbit_sequence(n: usize, dt: u32, start_soc: f64, t0: u32, rng: &mut impl Rng
     frames // return the list of frames
 }
 
-// ---------- Random healthy frames (from telemetryGen.py) ----------
+// ---------- Random healthy frames ----------
 
 /// One healthy EPS frame drawn from inside each field's envelope.
 fn nominal_frame(rng: &mut impl Rng) -> Frame {

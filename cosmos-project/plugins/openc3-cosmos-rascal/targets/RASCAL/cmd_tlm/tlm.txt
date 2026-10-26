@@ -34,3 +34,42 @@ TELEMETRY RASCAL ACK BIG_ENDIAN "Acknowledgment of a received command"
 
   APPEND_ID_ITEM  PKT_ID        8       UINT  3    "Packet ID"
   APPEND_ITEM     SEQ_NUM       8       UINT       "Sequence number of acknowledged command"
+
+
+TELEMETRY RASCAL ADCS BIG_ENDIAN "ADCS housekeeping from adcs_gen"
+  # Keyword      Name          BitSize Type  ID Description
+  APPEND_ID_ITEM PKT_ID        8       UINT  3  "Packet ID"
+  APPEND_ITEM    COUNTER       16      UINT     "Counter, +1 per packet"
+  APPEND_ITEM    SIM_TIME      32      UINT     "Simulated time"
+    UNITS milliseconds ms
+  APPEND_ITEM    GYRO_X        16      INT      "Gyro rate X"
+    POLY_READ_CONVERSION 0 0.01
+    UNITS degrees_per_second dps
+  APPEND_ITEM    GYRO_Y        16      INT      "Gyro rate Y"
+    POLY_READ_CONVERSION 0 0.01
+    UNITS degrees_per_second dps
+  APPEND_ITEM    GYRO_Z        16      INT      "Gyro rate Z (rotation axis)"
+    POLY_READ_CONVERSION 0 0.01
+    UNITS degrees_per_second dps
+  APPEND_ITEM    ACCEL_X       16      INT      "Accelerometer X"
+    UNITS milli_g mg
+  APPEND_ITEM    ACCEL_Y       16      INT      "Accelerometer Y"
+    UNITS milli_g mg
+  APPEND_ITEM    ACCEL_Z       16      INT      "Accelerometer Z"
+    UNITS milli_g mg
+  APPEND_ITEM    ANGLE         16      INT      "Current rotation angle"
+    POLY_READ_CONVERSION 0 0.01
+    UNITS degrees deg
+  APPEND_ITEM    TARGET_ANGLE  16      INT      "Commanded rotation angle"
+    POLY_READ_CONVERSION 0 0.01
+    UNITS degrees deg
+  APPEND_ITEM    WHEEL_SPEED   16      INT      "Reaction wheel speed"
+    UNITS rpm rpm
+  APPEND_ITEM    WHEEL_TORQUE  16      INT      "Reaction wheel motor torque"
+    UNITS micro_newton_meters uNm
+  APPEND_ITEM    WHEEL_CURRENT 16      UINT     "Reaction wheel current"
+    UNITS milliamps mA
+  APPEND_ITEM    MODE          8       UINT     "ADCS mode"
+    STATE IDLE 0
+    STATE DETUMBLE 1
+    STATE POINTING 2
