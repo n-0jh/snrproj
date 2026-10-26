@@ -18,3 +18,10 @@ TELEMETRY RASCAL HEALTH BIG_ENDIAN "test packet: a counter"
     UNITS celsius C
   APPEND_ITEM    SOLAR_CURRENT 16      INT      "Solar array current"
     UNITS milliamps mA
+
+
+TELEMETRY RASCAL ACK BIG_ENDIAN "Acknowledgment of a received command"
+  # Keyword        Name       BitSize   Type  ID   Description
+
+  APPEND_ID_ITEM  PKT_ID        8       UINT  3    "Packet ID"
+  APPEND_ITEM     SEQ_NUM       8       UINT       "Sequence number of acknowledged command"
