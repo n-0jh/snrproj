@@ -27,3 +27,10 @@ TELEMETRY RASCAL EPS BIG_ENDIAN "EPS housekeeping from eps_gen"
     UNITS milliamps mA
     # nominal 0-1200 mA, small negative values are noise during eclipse
     LIMITS DEFAULT 1 ENABLED -100 -50 1250 1350
+
+
+TELEMETRY RASCAL ACK BIG_ENDIAN "Acknowledgment of a received command"
+  # Keyword        Name       BitSize   Type  ID   Description
+
+  APPEND_ID_ITEM  PKT_ID        8       UINT  3    "Packet ID"
+  APPEND_ITEM     SEQ_NUM       8       UINT       "Sequence number of acknowledged command"
