@@ -3,17 +3,20 @@
 ## current structure
 * **'cosmos-project/** - OpenC3 core
 * **cosmos-project/plugins/openc3-cosmos-rascal/** - plugin that defines the RASCAL target and telemetry packet
-* **mock_lora_forc3/** - A mock rust 
-application to interpret data on C3
+* **satellite/** - rust programs that stand in for the satellite (one cargo workspace)
+  * `eps_gen` - sends simulated EPS (power system) telemetry
+  * `adcs_gen` - sends simulated ADCS (attitude) telemetry
+  * `uplink_listener` - receives encrypted commands from OpenC3 and sends an encrypted ACK back
 
-## prereq
+
+## prerequisites
 install the following
 * **docker desktop** 
 * **Rust**
 
 ## for installation
 (for security local .env are ignored)
-so to install openc3
+To install openc3
 
 1. navigate to:
 ``` cd cosmos-project ```
@@ -26,6 +29,8 @@ so to install openc3
 ``` ./openc3.sh run ```
 * **windows**
 ``` openc3.bat run ```
+
+`compose.override.yaml` is already in the repo. It opens UDP port 6900 so our rust programs can reach OpenC3. If you change it, restart OpenC3 (`./openc3.sh stop`, then `run`)
 
 4. once ran, visit:
 **`http://localhost:2900`**
@@ -50,25 +55,30 @@ This creates `openc3-cosmos-rascal-1.0.0.gem` in that folder.
  
 NOTE: Upon new VERSION1.x.x, click "UPDATE" in OpenC3 under Admin>Installed plugins.
 
-2. in OpenC3 go to Admin > Plugins > Install from file choose `.gem`, check `rascal_tlm_port`is **6900** and `rascal_cmd_port` is **6901** then click **Install**
+2. in OpenC3 go to Admin > Plugins > Install from file choose `.gem`, check that `rascal_tlm_port`is **6900** and `rascal_cmd_port` is **6901** and `rascal_cmd_host` is **host.docker.internal** then click **Install**
 
-3. Rascal should now be viewable in the Installed Plugins list
+NOTE: host.docker.internal is how OpenC3, inside docker, reaches the rust programs on your computer
+
+3. RASCAL should now be viewable in the Installed Plugins list
+
+NOTE: after a pull request the plugin may change, rebuild with a higher VERSION (1.0.1, 1.0.2, ...) and in Admin > Plugins click `...` > **Upgrade** on RASCAL. Don't use Install from file again, it fails with "already exists".
 
 4. run telemetry from command line
+
+**EPS generator** (see "view the EPS graphs" below)
 ```bash
-cd mock_lora_forc3
-cargo run --release
+cd satellite
+cargo run --release -p eps_gen
 ```
-counter should be incrementing once per second
 
 ## view the telemetry
 1. open **Packet Viewer** from the OpenC3 tool menu
-2. select target **RASCAL**, packet **HEALTH**
+2. select target **RASCAL**, packet **EPS**
 3. `COUNTER` should match that in your command line
 
 to check it is arriving, open **CmdTlmServer**:
 * **Interfaces** tab: `RASCAL_INT` should be CONNECTED and its packet count should go up
-* **Packets** tab: `RASCAL HEALTH` received count should go up
+* **Packets** tab: `RASCAL EPS` received count should go up
 
 
 ## view the EPS graphs
@@ -94,9 +104,37 @@ cargo run --release
 eps_gen sends one 90 minute orbit in 90 seconds (1 packet per second = 60 s of orbit), then stops. Run it again to replay.
 
 
+## send a command
+commands go from OpenC3 to the satellite program, encrypted with AES-256-GCM.
+ 
+1. start the satellite command receiver:
+```bash
+cd satellite
+cargo run --release -p uplink_listener
+```
+2. in OpenC3 open **Command Sender**, select **RASCAL NOOP**, and send it
+3. the listener should print that authentication succeeded, `NOOP received with sequence number N`, and `Encrypted ACK sent`
+4. in OpenC3 check the **ACK** packet (Packet Viewer > RASCAL > ACK, or CmdTlmServer > Packets). Its `SEQ_NUM` should match the command
+ 
+You can run `uplink_listener` and a telemetry sender at the same time.
+
 ## packet format
 big-endian, once per second.
 NOTE: must match what is inside of 'mock_lore_forc3/src/main.rs` and `cosmos-project/plugins/openc3-cosmos-rascal-targets/RASCAL/cmd_tlm/tlm.txt`
+
+telemetry (satellite to OpenC3), first byte is the packet ID:
+* **HEALTH** (ID 1): COUNTER (u16)
+* **EPS** (ID 2): COUNTER (u16), SIM_TIME (u32, s), BATT_VOLTAGE (u16, mV), BATT_CURRENT (i16, mA), BATT_TEMP (i16, 0.01 C), SOLAR_CURRENT (i16, mA)
+* **ACK** (ID 3): SEQ_NUM (u8), sent encrypted
+ 
+commands (OpenC3 to satellite):
+* **NOOP** (ID 1): SEQ_NUM (u8)
+ 
+encrypted command: `[version=1][direction=1]` (2 byte header, authenticated) + 12 byte nonce + ciphertext + 16 byte tag. plaintext is `[CMD_ID][SEQ_NUM]`
+
+encrypted ACK: `[0xA5][version=1][direction=2]` (3 byte header) + 12 byte nonce + ciphertext + 16 byte tag. plaintext is `[3][SEQ_NUM]`
+
+
 
 ## ports
 port | use 
