@@ -46,7 +46,7 @@ const TARGET_DEG: f64 = 90.0;    // where we want to point, degrees
 
 // ---------- Downlink ----------
 const DEST: &str = "127.0.0.1:6900"; // COSMOS IP and port (127.0.0.1 = this computer)
-const PKT_ID_ADCS: u8 = 3;           // ID that tells COSMOS "this is an ADCS packet" (must match tlm.txt)
+const PKT_ID_ADCS: u8 = 4;           // ID that tells COSMOS "this is an ADCS packet" (must match tlm.txt)
 
 /// One ADCS frame, already in the units that go in the packet.
 struct AdcsFrame {
