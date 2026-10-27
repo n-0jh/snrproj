@@ -47,8 +47,8 @@ module OpenC3
 
         first_byte = data.getbyte(0)
 
-        # Existing HEALTH and EPS telemetry are plaintext.
-        if first_byte == 1 || first_byte == 2
+        # Existing HEALTH and EPS and ADCS telemetry are plaintext.
+        if first_byte == 1 || first_byte == 2 || first_byte == 4
             return data, extra
         end
 
