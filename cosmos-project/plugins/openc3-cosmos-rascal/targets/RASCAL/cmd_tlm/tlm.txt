@@ -38,7 +38,7 @@ TELEMETRY RASCAL ACK BIG_ENDIAN "Acknowledgment of a received command"
 
 TELEMETRY RASCAL ADCS BIG_ENDIAN "ADCS housekeeping from adcs_gen"
   # Keyword      Name          BitSize Type  ID Description
-  APPEND_ID_ITEM PKT_ID        8       UINT  3  "Packet ID"
+  APPEND_ID_ITEM PKT_ID        8       UINT  4  "Packet ID"
   APPEND_ITEM    COUNTER       16      UINT     "Counter, +1 per packet"
   APPEND_ITEM    SIM_TIME      32      UINT     "Simulated time"
     UNITS milliseconds ms
