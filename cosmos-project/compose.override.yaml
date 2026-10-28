@@ -338,4 +338,4 @@
 services:
   openc3-operator:
     ports:
-      - "127.0.0.1:6900:6900/udp"
+      - "0.0.0.0:6900:6900/udp"

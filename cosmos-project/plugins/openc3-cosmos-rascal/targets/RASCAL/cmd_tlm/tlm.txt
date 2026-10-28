@@ -73,3 +73,9 @@ TELEMETRY RASCAL ADCS BIG_ENDIAN "ADCS housekeeping from adcs_gen"
     STATE IDLE 0
     STATE DETUMBLE 1
     STATE POINTING 2
+
+TELEMETRY RASCAL ESP32 BIG_ENDIAN "ESP32 onboard housekeeping telemetry"
+  APPEND_ID_ITEM PKT_ID 8 UINT 5 "Packet ID"
+  APPEND_ITEM COUNTER 16 UINT "Telemetry packet counter"
+  APPEND_ITEM UPTIME 32 UINT "ESP32 uptime in seconds"
+    UNITS seconds s
