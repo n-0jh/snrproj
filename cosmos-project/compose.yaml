@@ -409,7 +409,7 @@ services:
       # - "./openc3-traefik/cert.crt:/etc/traefik/cert.crt:z"
     ports:
       - "127.0.0.1:2900:2900"
-      - "127.0.0.1:2943:2943"
+      - "127.0.0.1:32943:2943"
       # - "80:2900"
       # - "443:2943"
     restart: "unless-stopped"

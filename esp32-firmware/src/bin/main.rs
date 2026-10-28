@@ -24,7 +24,7 @@ use log::{error, info};
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
 
-const GROUND_STATION_IP: [u8; 4] = [192, 168, 1, 180];
+const GROUND_STATION_IP: [u8; 4] = [172, 20, 10, 2];
 const TELEMETRY_PORT: u16 = 6900;
 
 #[panic_handler]
