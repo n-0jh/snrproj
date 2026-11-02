@@ -17,6 +17,7 @@ openc3/spec/install/outputs
 openc3/spec/examples.txt
 coverage/
 profile/
+plugins/openc3-cosmos-rascal/build/
 
 # local env files
 .env.local

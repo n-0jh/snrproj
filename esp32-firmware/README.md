@@ -17,8 +17,11 @@ The current implementation supports:
 - UDP telemetry transmission to the ground station
 - Live telemetry decoding and display in OpenC3 COSMOS
 - Independent operation using an external USB power supply
+- Encrypted command uplink: AES-256-GCM authenticated commands received on UDP port 6901
+- Encrypted acknowledgments (ACKs) returned to the ground station
+- Verified over an iPhone hotspot (2.4 GHz) with the OpenC3 ground station on a laptop
 
-**Current status:** Telemetry downlink implemented and verified. Command uplink and encrypted acknowledgments are future milestones.
+**Current status:** Telemetry downlink, encrypted command uplink (NOOP), and encrypted ACKs are implemented and verified over Wi-Fi. Replay protection, key management, and telemetry encryption are future milestones.
 
 ## 1. Hardware Requirements
 
@@ -84,6 +87,12 @@ espflash --version
 
 The ESP32 toolchain should appear in the installed toolchains.
 
+### Linux notes
+
+- The Xtensa toolchain is installed with `espup`, which writes `~/export-esp.sh`. Run `source ~/export-esp.sh` in every new terminal before building, or add it to `~/.bashrc`.
+- Install espflash with `sudo apt install -y pkg-config libudev-dev` then `cargo install espflash --locked`.
+- Allow serial access with `sudo usermod -aG dialout $USER`, then log out and back in.
+
 ### Identify the ESP32
 
 Connect the ESP32 through USB and identify its serial port.
@@ -120,6 +129,7 @@ snrproj/
 └── esp32-firmware/
     ├── .cargo/
     ├── src/
+        - command.rs
     │   └── bin/
     │       └── main.rs
     ├── Cargo.toml
@@ -150,6 +160,9 @@ The ESP32 connects to a Wi-Fi network and transmits telemetry to the ground stat
 Teammates must replace the configured ground station address with their own computer's reachable LAN IPv4 address.
 
 The ESP32's DHCP address may change between networks or sessions.
+
+
+
 
 ### Determine the Ground Station IP
 
@@ -191,6 +204,12 @@ In PowerShell:
 ```powershell
 $env:SSID = "YOUR_WIFI_NAME"
 $env:PASSWORD = "YOUR_WIFI_PASSWORD"
+```
+In Linux:
+
+```bash
+export SSID="YOUR_WIFI_NAME"
+export PASSWORD="YOUR_WIFI_PASSWORD"
 ```
 
 Then compile:
@@ -331,8 +350,56 @@ TELEMETRY RASCAL ESP32 BIG_ENDIAN "ESP32 onboard housekeeping telemetry"
   APPEND_ITEM UPTIME 32 UINT "ESP32 uptime in seconds"
     UNITS seconds s
 ```
+## 9. Command Uplink and Encrypted ACK
 
-## 9. Testing UDP Communication Without COSMOS
+The ESP32 receives encrypted commands from OpenC3 on UDP port 6901 and replies with an encrypted ACK to the ground station on port 6900. The logic is in `src/command.rs`, ported from `satellite/uplink_listener`, and the receive loop is `command_task` in `src/bin/main.rs`.
+
+### Command format (OpenC3 to ESP32)
+
+| Part | Size |
+|---|---|
+| Header: version (1), direction (1) | 2 bytes |
+| Nonce | 12 bytes |
+| Ciphertext (CMD_ID, SEQ_NUM) | 2 bytes |
+| AES-GCM tag | 16 bytes |
+
+Commands (OpenC3 to ESP32) and ACKs (ESP32 to OpenC3) are encrypted and authenticated with AES-256-GCM. The ESP32 telemetry downlink is currently **unencrypted and unauthenticated**.
+
+For the ESP32 link, set `rascal_cmd_host` to the ESP32's IP address.
+
+
+### ACK format (ESP32 to OpenC3)
+
+| Part | Size |
+|---|---|
+| Header: 0xA5, version (1), direction (2) | 3 bytes |
+| Nonce (random, from the ESP32 hardware RNG) | 12 bytes |
+| Ciphertext (ACK ID 3, SEQ_NUM) | 2 bytes |
+| AES-GCM tag | 16 bytes |
+
+Total: 33 bytes. Commands and ACKs use separate keys.
+
+### Test procedure
+
+1. Flash the firmware and note the ESP32 IP in the serial log.
+2. In OpenC3, go to Admin > Plugins > `...` > Upgrade on RASCAL and set `rascal_cmd_host` to the ESP32 IP.
+3. In Command Sender, send RASCAL NOOP with SEQ_NUM 42.
+4. The ESP32 log should show:
+
+```text
+Received 32 bytes from ...
+AES-GCM authentication successful
+NOOP received with sequence number 42
+Encrypted ACK sent with sequence number 42 (33 bytes)
+```
+
+5. OpenC3 log messages show `ACK authenticated: 032a`, and Packet Viewer > RASCAL > ACK shows SEQ_NUM 42.
+
+A command with a wrong key or a damaged packet is rejected with `Command rejected: AuthFailed` and no ACK is sent.
+
+The command logic is unit tested on a laptop (valid command produces a correct ACK; tampered, short, wrong-header, and unknown-command packets are rejected). The module uses `#![forbid(unsafe_code)]`.
+
+## 10. Testing UDP Communication Without COSMOS
 
 Before testing COSMOS integration, telemetry can be received directly in Windows PowerShell.
 
@@ -373,7 +440,7 @@ $udp.Dispose()
 
 Do not run two receivers bound to the same UDP address and port simultaneously.
 
-## 10. OpenC3 COSMOS Integration
+## 11. OpenC3 COSMOS Integration
 
 The ground station uses a custom RASCAL COSMOS plugin.
 
@@ -412,7 +479,7 @@ Encrypted acknowledgment packets use a separate authenticated packet format.
 
 The ESP32 telemetry downlink is currently **unencrypted and unauthenticated**.
 
-## 11. Docker UDP Port Mapping
+## 12. Docker UDP Port Mapping
 
 The COSMOS operator runs in Docker.
 
@@ -460,7 +527,7 @@ Use this configuration only on a trusted development network and restrict inboun
 
 A more restrictive deployment may bind only to the ground station's LAN address.
 
-## 12. Building the RASCAL COSMOS Plugin
+## 13. Building the RASCAL COSMOS Plugin
 
 Changes to `tlm.txt` or `secure_link_protocol.rb` must be included in a rebuilt plugin.
 
@@ -505,7 +572,7 @@ For later updates, increment the plugin version rather than overwriting an exist
 
 Verify that the RASCAL interface is connected.
 
-## 13. Verifying Telemetry in COSMOS
+## 14. Verifying Telemetry in COSMOS
 
 Open the COSMOS **Packet Viewer**.
 
@@ -528,7 +595,7 @@ The firmware has been tested transmitting packets to COSMOS through the Windows 
 
 Successful operation is confirmed when the Packet Viewer values update continuously.
 
-## 14. Independent Power Test
+## 15. Independent Power Test
 
 After flashing, the ESP32 does not need a USB data connection to the ground station.
 
@@ -552,7 +619,7 @@ Expected behavior:
 
 This test was successfully demonstrated using a USB wall charger.
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 ### `xtensa-esp32-elf-gcc` not found
 
@@ -619,37 +686,39 @@ Get-Content .\src\bin\main.rs
 
 Save changes before rebuilding and reflashing.
 
-## 16. Current Limitations
+## 17. Current Limitations
 
 The current prototype has several known limitations:
 
-1. Telemetry is not encrypted or authenticated.
-2. Wi-Fi credentials are embedded at compile time.
-3. The ground station IP address is hardcoded.
-4. There is no ESP32 command uplink yet.
-5. There are no encrypted ESP32 acknowledgments.
-6. UDP does not guarantee packet delivery.
-7. Telemetry currently contains uptime and a packet counter.
-8. Communication has only been tested over Wi-Fi, not LoRa.
-9. The implementation is a development prototype, not flight-qualified firmware.
-10. The Wi-Fi implementation is specific to the ESP32.
+- Telemetry is not encrypted or authenticated.
+- Wi-Fi credentials are embedded at compile time.
+- The ground station IP address is hardcoded.
+- UDP does not guarantee packet delivery.
+- Telemetry currently contains uptime and a packet counter.
+- Communication has only been tested over Wi-Fi, not LoRa.
+- The implementation is a development prototype, not flight-qualified firmware.
+- The Wi-Fi implementation is specific to the ESP32.
+- Commands have no replay protection (a recorded valid packet can be resent).
+- The SEQ_NUM is 8 bits and entered manually.
+- AES keys are hardcoded in the firmware and the Ruby protocol; anyone who can read the flash can read them.
+- Only the NOOP command exists.
 
 These limitations will be addressed as development continues.
 
-## 17. Development Roadmap
+## 18. Development Roadmap
 
 | Milestone | Objective | Status |
 |---|---|---|
 | 1 | Program ESP32 in Rust | Complete |
 | 2 | Connect ESP32 to Wi-Fi | Complete |
 | 3 | Send ESP32 telemetry to COSMOS | Complete |
-| 4 | Receive COSMOS commands on ESP32 | Planned |
-| 5 | Authenticate AES-GCM commands | Planned |
-| 6 | Return encrypted acknowledgments | Planned |
+| 4 | Receive COSMOS commands on ESP32 | Complete |
+| 5 | Authenticate AES-GCM commands | Complete |
+| 6 | Return encrypted acknowledgments | Complete |
 | 7 | Expand real onboard telemetry | Planned |
 | 8 | Separate communication logic from Wi-Fi for LoRa integration | Planned |
 
-## 18. Future Architecture
+## 19. Future Architecture
 
 The long-term goal is to separate the application protocol from the physical communication method.
 
@@ -665,7 +734,7 @@ This will allow the team to replace Wi-Fi with LoRa without rewriting the applic
 
 The ESP32 is a temporary development platform. Successful communication over Wi-Fi does not independently validate LoRa range, timing, packet loss, or radio performance.
 
-## 19. Reproduction Checklist
+## 20. Reproduction Checklist
 
 A teammate reproducing the current demonstration should be able to confirm:
 
@@ -682,9 +751,12 @@ A teammate reproducing the current demonstration should be able to confirm:
 - [ ] RASCAL plugin includes ESP32 packet ID 5.
 - [ ] COSMOS Packet Viewer displays increasing uptime.
 - [ ] ESP32 continues operating when powered independently.
+- [ ] `rascal_cmd_host` is set to the ESP32's IP.
+- [ ] A NOOP from Command Sender appears in the ESP32 log.
+- [ ] The encrypted ACK is authenticated in OpenC3 with the matching SEQ_NUM.
 
-## 20. Project Status
+## 21. Project Status
 
-This milestone establishes a working, hardware-based telemetry downlink between an independently powered ESP32 and the RASCAL OpenC3 COSMOS ground station.
+This milestone establishes a working two-way link between an independently powered ESP32 and the RASCAL OpenC3 COSMOS ground station: telemetry downlink plus an AES-256-GCM encrypted command uplink with encrypted acknowledgments, verified over Wi-Fi.
 
-The next development objective is implementing the command uplink from COSMOS to the ESP32.
+The next development objectives are replay protection and key management, then telemetry encryption.
