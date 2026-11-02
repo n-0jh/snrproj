@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 rand = "0.9"
 rand_distr = "0.5"
+secure_link = { path = "../secure_link" }

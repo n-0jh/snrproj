@@ -11,6 +11,10 @@ use std::io::{BufWriter, Write};        // fast, buffered writing to files
 use std::net::UdpSocket;                // sending UDP packets
 use std::thread::sleep;                 // pausing the program
 use std::time::Duration;                // how long to pause
+use secure_link::{encrypt_packet, NonceManager}; //used for encryption
+use std::path::Path;
+
+
 
 // ---------- Physical constants (typical 1U CubeSat) ----------
 const I_BODY: f64 = 0.002;           // how hard the body is to spin, kg*m^2
@@ -47,6 +51,19 @@ const TARGET_DEG: f64 = 90.0;    // where we want to point, degrees
 // ---------- Downlink ----------
 const DEST: &str = "127.0.0.1:6900"; // COSMOS IP and port (127.0.0.1 = this computer)
 const PKT_ID_ADCS: u8 = 4;           // ID that tells COSMOS "this is an ADCS packet" (must match tlm.txt)
+const DOWNLINK_MARKER: u8 = 0xA5;
+const VERSION: u8 = 1;
+const DOWNLINK_DIRECTION: u8 = 2;
+
+
+// Separate temporary AES-256 key for satellite-to-ground ADCS.
+const ADCS_KEY: [u8; 32] = [
+    0x3C, 0xA7, 0xBD, 0x16, 0xE1, 0x45, 0xD1, 0x41, 0xCC, 0xCC, 0x28, 0xBC, 0x2C, 0x01, 0x2B, 0x18, 0x04, 0x7D, 0x7F, 0xC1, 0xC0, 0x2F, 0xE4, 0x3E, 0xEB, 0x17, 0xE6, 0x72, 0x77, 0x56, 0xA6, 0xD8
+];
+
+
+
+
 
 /// One ADCS frame, already in the units that go in the packet.
 struct AdcsFrame {
@@ -208,6 +225,13 @@ fn pack_adcs(counter: u16, f: &AdcsFrame) -> [u8; 30] {
 fn main() {
     let mut rng = rand::rng(); // random number generator for the noise
 
+
+    let mut adcs_nonce_manager = NonceManager::new( [0, 0, 0, 3], Path::new("../nonce_counters/adcs_counter.bin"), // calling NonceManager constuctor 
+    ).expect("Failed to initialize ADCS nonce manager");
+
+
+
+
     let frames = simulate(&mut rng); // run the whole scenario
     write_log("adcs_log.csv", &frames).expect("could not write adcs_log.csv"); // save every frame
     println!("wrote {} frames to adcs_log.csv", frames.len());                 // confirm it
@@ -219,12 +243,43 @@ fn main() {
     println!("sending {} packets to {}", frames.len(), DEST);                     // say where they're going
 
     for f in &frames {                                           // one pass per frame
-        let pkt = pack_adcs(counter, f);                         // turn the frame into bytes
-        sock.send_to(&pkt, DEST).expect("could not send packet"); // send it to COSMOS
+        
+        // Construct the original 30-byte ADCS telemetry packet.
+        let pkt = pack_adcs(counter, f);
+
+        // Reserve a unique nonce for this ADCS packet.
+        let nonce = adcs_nonce_manager.next_nonce().expect("Failed to reserve ADCS nonce");
+
+        // Same authenticated downlink header as ACK and EPS.
+        let header = [
+            DOWNLINK_MARKER,
+            VERSION,
+            DOWNLINK_DIRECTION,
+        ];
+
+        // Encrypt the original ADCS packet using AES-256-GCM.
+        let encrypted_pkt = encrypt_packet(
+            &pkt,
+            &ADCS_KEY,
+            &header,
+            &nonce,
+        ).expect("Failed to encrypt ADCS telemetry");
+
+        // Send the encrypted packet to OpenC3.
+        sock.send_to(&encrypted_pkt, DEST)
+            .expect("Failed to send encrypted ADCS telemetry");
+
         println!(
-            "sent #{counter} t={:.1}s mode={} angle={:.1}deg wheel={}rpm", // show what went out
-            f.t_ms as f64 / 1000.0, f.mode, f.angle as f64 / 100.0, f.wheel_rpm
+            "Encrypted ADCS packet sent: {} bytes",
+            encrypted_pkt.len()
         );
+
+       // let pkt = pack_adcs(counter, f);                         // turn the frame into bytes
+       // sock.send_to(&pkt, DEST).expect("could not send packet"); // send it to COSMOS
+       // println!(
+       //     "sent #{counter} t={:.1}s mode={} angle={:.1}deg wheel={}rpm", // show what went out
+       //     f.t_ms as f64 / 1000.0, f.mode, f.angle as f64 / 100.0, f.wheel_rpm
+       // );
         counter = counter.wrapping_add(1); // +1, rolls back to 0 after 65535
         sleep(frame_period);               // wait until the next frame is due
     }
@@ -273,7 +328,7 @@ mod tests {
             mode: 2,
         };
         assert_eq!(pack_adcs(1, &f), [
-            3,                      // PKT_ID
+            4,                      // PKT_ID
             0x00, 0x01,             // counter = 1
             0x00, 0x00, 0x01, 0xF4, // time = 500 ms
             0x00, 0x01,             // gyro X = 1

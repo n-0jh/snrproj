@@ -142,3 +142,32 @@ port | use
 6900/udp | telemetry into OpenC3
 6901/udp | commands out of OpenC3 
 7799-7814/udp | reserved by OpenC3
+
+
+
+## How to Generate random keys in windows
+Run these commands in PowerShell:
+1. $key = New-Object byte[] 32
+2. $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+3. $rng.GetBytes($key)
+4. $rng.Dispose()
+How to display the key :
+1. $keyHex = [BitConverter]::ToString($key).Replace("-", "")
+2. $keyHex
+How to format key for Rust : 
+1. ($key | ForEach-Object { "0x{0:X2}" -f $_ }) -join ", "
+
+
+
+## Counter files
+Each memebr of the team has to create there own counter file with with a new encryption key 
+for windows:
+move to this location \snrproj\satellite
+create a directory , for windows, run this command --> New-Item -ItemType Directory -Force -Path .\nonce_counters
+Then run this command --> [System.IO.File]::WriteAllBytes(
+    (Join-Path (Get-Location).Path "nonce_counters\ack_counter.bin"),
+    [byte[]](0,0,0,0,0,0,0,0)
+)
+
+
+
