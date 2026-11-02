@@ -56,7 +56,7 @@ smoltcp = { version = "0.14.0", default-features = false, features = [
   "socket-tcp",
   "socket-udp",
 ] }
-
+aes-gcm = { version = "0.11.1", default-features = false, features = ["aes", "alloc"] }
 critical-section = "1.2.0"
 static_cell      = "2.1.1"
 

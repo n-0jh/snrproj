@@ -5,7 +5,7 @@ extern crate alloc;
 
 use embassy_executor::Spawner;
 use embassy_net::{
-    Runner, StackResources,
+    Runner, Stack, StackResources,
     udp::{PacketMetadata, UdpSocket},
 };
 use embassy_time::{Duration, Timer};
@@ -26,6 +26,15 @@ const PASSWORD: &str = env!("PASSWORD");
 
 const GROUND_STATION_IP: [u8; 4] = [172, 20, 10, 2];
 const TELEMETRY_PORT: u16 = 6900;
+
+// C3 sends encrypted commands to this port (rascal_cmd_port in the plugin)
+const COMMAND_PORT: u16 = 6901;
+
+// encrypted command decode + ACK builder
+#[path = "../command.rs"]
+mod command;
+use command::SecureLink;
+
 
 #[panic_handler]
 fn panic(panic_info: &core::panic::PanicInfo) -> ! {
@@ -84,9 +93,9 @@ async fn main(spawner: Spawner) -> ! {
     let seed = ((rng.random() as u64) << 32) | (rng.random() as u64);
 
     // Allocate network stack resources
-    static RESOURCES: static_cell::StaticCell<StackResources<3>> = static_cell::StaticCell::new();
+    static RESOURCES: static_cell::StaticCell<StackResources<5>> = static_cell::StaticCell::new();
 
-    let resources = RESOURCES.init(StackResources::<3>::new());
+    let resources = RESOURCES.init(StackResources::<5>::new());
 
     let (stack, runner) = embassy_net::new(wifi_interface, net_config, resources, seed);
 
@@ -102,6 +111,10 @@ async fn main(spawner: Spawner) -> ! {
         info!("Wi-Fi connected!");
         info!("ESP32 IP address: {}", config.address);
     }
+
+
+    // start the encrypted command receiver (has its own UDP socket on COMMAND_PORT)
+    spawner.spawn(command_task(stack).unwrap());
 
     // Allocate UDP receive/transmit buffers
     let mut rx_meta = [PacketMetadata::EMPTY; 1];
@@ -161,6 +174,72 @@ async fn main(spawner: Spawner) -> ! {
             Err(e) => {
                 error!("UDP transmission failed: {:?}", e);
             }
+        }
+    }
+}
+
+// receives encrypted commands from C3, replies with an encrypted ACK
+#[embassy_executor::task]
+async fn command_task(stack: Stack<'static>) {
+    let link = SecureLink::new();
+    let rng = Rng::new();
+
+    let mut rx_meta = [PacketMetadata::EMPTY; 4];
+    let mut rx_buffer = [0u8; 512];
+    let mut tx_meta = [PacketMetadata::EMPTY; 4];
+    let mut tx_buffer = [0u8; 512];
+
+    let mut socket = UdpSocket::new(
+        stack,
+        &mut rx_meta,
+        &mut rx_buffer,
+        &mut tx_meta,
+        &mut tx_buffer,
+    );
+    socket
+        .bind(COMMAND_PORT)
+        .expect("Failed to bind command socket");
+
+    info!("Listening for encrypted commands on UDP port {}", COMMAND_PORT);
+
+    let mut buf = [0u8; 256];
+
+    loop {
+        let (len, meta) = match socket.recv_from(&mut buf).await {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Command receive failed: {:?}", e);
+                continue;
+            }
+        };
+
+        info!("Received {} bytes from {}", len, meta.endpoint);
+
+        // Fresh random 12-byte nonce for the ACK
+        let mut nonce = [0u8; command::NONCE_LEN];
+        for chunk in nonce.chunks_mut(4) {
+            chunk.copy_from_slice(&rng.random().to_be_bytes());
+        }
+
+        match link.handle(&buf[..len], nonce) {
+            Ok((seq, ack)) => {
+                info!("AES-GCM authentication successful");
+                info!("NOOP received with sequence number {}", seq);
+
+                let destination = (
+                    embassy_net::Ipv4Address::from_octets(GROUND_STATION_IP),
+                    TELEMETRY_PORT,
+                );
+                match socket.send_to(&ack, destination).await {
+                    Ok(()) => info!(
+                        "Encrypted ACK sent with sequence number {} ({} bytes)",
+                        seq,
+                        ack.len()
+                    ),
+                    Err(e) => error!("ACK transmission failed: {:?}", e),
+                }
+            }
+            Err(e) => error!("Command rejected: {:?}", e),
         }
     }
 }
