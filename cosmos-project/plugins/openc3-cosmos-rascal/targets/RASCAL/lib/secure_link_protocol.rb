@@ -32,9 +32,8 @@ module OpenC3
         '00112233445566778899aabbccddeeff'
       ].pack('H*')
 
-      @ack_key = [
-        '102132435465768798a9bacbdcedfe0f' \
-        '102132435465768798a9bacbdcedfe0f'
+      @downlink_key = [
+        '3CA7BD16E145D141CCCC28BC2C012B18047D7FC1C02FE43EEB17E6727756A6D8'
        ].pack('H*')
 
 
@@ -47,12 +46,12 @@ module OpenC3
 
         first_byte = data.getbyte(0)
 
-        # Existing HEALTH and EPS and ADCS telemetry are plaintext.
-        if first_byte == 1 || first_byte == 2 || first_byte == 4 || first_byte == 5
+        # Existing HEALTH and packet ID 5 are plaintext.
+        if first_byte == 1 || first_byte == 5
             return data, extra
         end
 
-        # Encrypted ACKs must start with our marker.
+        # Encrypted downlink must start with our marker.
         if first_byte != ACK_MARKER
             OpenC3::Logger.warn(
             "[RASCAL SECURITY] Unknown incoming packet type"
@@ -72,7 +71,7 @@ module OpenC3
 
         if data.bytesize < min_len
             OpenC3::Logger.warn(
-            "[RASCAL SECURITY] Encrypted ACK too short"
+            "[RASCAL SECURITY] Encrypted downlink packet too short"
             )
             return nil, extra
         end
@@ -87,7 +86,7 @@ module OpenC3
 
         if version != VERSION || direction != ACK_DIRECTION
             OpenC3::Logger.warn(
-            "[RASCAL SECURITY] Invalid ACK version or direction"
+            "[RASCAL SECURITY] Invalid downlink version or direction"
             )
             return nil, extra
         end
@@ -111,7 +110,7 @@ module OpenC3
             decipher = OpenSSL::Cipher.new('aes-256-gcm')
             decipher.decrypt #set the vipher mode 
 
-            decipher.key = @ack_key
+            decipher.key = @downlink_key
             decipher.iv = nonce
             decipher.auth_tag = tag
             decipher.auth_data = header
@@ -125,20 +124,59 @@ module OpenC3
             )
             return nil, extra
         end
+        # Determine which telemetry packet was decrypted.
+        packet_id = plaintext.getbyte(0)
 
-        # ACK must contain [PKT_ID=3][SEQ_NUM].
-        if plaintext.bytesize != 2 || plaintext.getbyte(0) != 3
-            OpenC3::Logger.warn(
-            "[RASCAL SECURITY] Invalid decrypted ACK format"
+        case packet_id
+            
+            when 4
+            # ADCS packet: 30 bytes, starting with PKT_ID=4.
+            if plaintext.bytesize != 30
+                OpenC3::Logger.warn(
+                    "[RASCAL SECURITY] Invalid decrypted ADCS length"
+                )
+                return nil, extra
+            end
+
+            OpenC3::Logger.info(
+                "[RASCAL SECURITY] ADCS authenticated: #{plaintext.unpack1('H*')}"
             )
-            return nil, extra
-        end
 
-        OpenC3::Logger.info(
-            "[RASCAL SECURITY] ACK authenticated: #{plaintext.unpack1('H*')}"
-        )
+            when 3
+                # ACK packet: [PKT_ID=3][SEQ_NUM]
+                if plaintext.bytesize != 2
+                    OpenC3::Logger.warn(
+                        "[RASCAL SECURITY] Invalid decrypted ACK length"
+                    )
+                    return nil, extra
+                end
 
-        return plaintext, extra
+                OpenC3::Logger.info(
+                    "[RASCAL SECURITY] ACK authenticated: #{plaintext.unpack1('H*')}"
+                )
+                
+
+            when 2
+                # EPS packet: 15 bytes, starting with PKT_ID=2.
+                if plaintext.bytesize != 15
+                    OpenC3::Logger.warn(
+                        "[RASCAL SECURITY] Invalid decrypted EPS length"
+                    )
+                    return nil, extra
+                end
+
+                OpenC3::Logger.info(
+                    "[RASCAL SECURITY] EPS authenticated: #{plaintext.unpack1('H*')}"
+                )
+
+            else
+                OpenC3::Logger.warn(
+                    "[RASCAL SECURITY] Unknown decrypted packet ID: #{packet_id.inspect}"
+                )
+                return nil, extra
+            end
+
+            return plaintext, extra
     end
 
 
