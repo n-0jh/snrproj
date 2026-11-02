@@ -151,9 +151,11 @@ Run these commands in PowerShell:
 2. $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 3. $rng.GetBytes($key)
 4. $rng.Dispose()
+   
 How to display the key :
 1. $keyHex = [BitConverter]::ToString($key).Replace("-", "")
 2. $keyHex
+
 How to format key for Rust : 
 1. ($key | ForEach-Object { "0x{0:X2}" -f $_ }) -join ", "
 
