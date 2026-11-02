@@ -9,8 +9,8 @@ cosmos-project/*.gem
 cosmos-project/plugins/*.gem
 
 
-
-
+#counter files
+/satellite/nonce_counters/
 
 
 

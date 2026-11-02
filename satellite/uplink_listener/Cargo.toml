@@ -7,3 +7,4 @@ edition = "2024"
 aes-gcm = "0.11.1"
 rand = "0.8" # mock values for our sensor
 byteorder = "1.5" # big_endian format
+secure_link = { path = "../secure_link" }

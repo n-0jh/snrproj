@@ -8,6 +8,10 @@ use std::io::{BufWriter, Write};        // fast, buffered writing to files
 use std::net::UdpSocket;                // sending UDP packets
 use std::thread::sleep;                 // pausing the program
 use std::time::Duration;                // how long to pause
+use secure_link::{encrypt_packet, NonceManager}; // used to encrypt data 
+use std::path::Path;
+
+
 
 // ---------- Orbit and power constants ----------
 const ORBIT_PERIOD_S: u32 = 5400;      // ~90 min, typical LEO
@@ -23,6 +27,14 @@ const NOISE_SIGMA_FRAC: f64 = 0.01;    // jitter as a fraction of each field's s
 // ---------- Downlink ----------
 const DEST: &str = "127.0.0.1:6900"; // where packets go: COSMOS IP and port (127.0.0.1 = this computer)
 const PKT_ID_EPS: u8 = 2;            // ID that tells COSMOS "this is an EPS packet" (must match tlm.txt)
+const DOWNLINK_MARKER: u8 = 0xA5;
+const VERSION: u8 = 1;
+const DOWNLINK_DIRECTION: u8 = 2;
+
+// Separate temporary AES-256 key for satellite-to-ground EPS.
+const EPS_KEY: [u8; 32] = [
+    0x3C, 0xA7, 0xBD, 0x16, 0xE1, 0x45, 0xD1, 0x41, 0xCC, 0xCC, 0x28, 0xBC, 0x2C, 0x01, 0x2B, 0x18, 0x04, 0x7D, 0x7F, 0xC1, 0xC0, 0x2F, 0xE4, 0x3E, 0xEB, 0x17, 0xE6, 0x72, 0x77, 0x56, 0xA6, 0xD8
+];
 
 // ---------- Schema (stand-in for telemetrySchema.py) ----------
 
@@ -215,11 +227,44 @@ fn main() {
     let mut counter: u16 = 0;                                                     // packet counter, starts at 0
     println!("sending {} packets to {}", seq.len(), DEST);                        // say where they're going
 
+
+    let mut eps_nonce_manager = NonceManager::new( [0, 0, 0, 2], Path::new("../nonce_counters/eps_counter.bin"), // calling NonceManager constuctor 
+    ).expect("Failed to initialize EPS nonce manager");
+
+
     for (i, frame) in seq.iter().enumerate() {                   // one pass per frame
         let sim_time = t0 + i as u32 * dt;                       // simulated time of this frame
-        let pkt = pack_eps(counter, sim_time, frame);            // turn the frame into bytes
-        sock.send_to(&pkt, DEST).expect("could not send packet"); // send it to COSMOS
-        println!("sent #{counter} t={sim_time}s {:?}", frame);    // show what went out
+        //let pkt = pack_eps(counter, sim_time, frame);            // turn the frame into bytes
+        //sock.send_to(&pkt, DEST).expect("could not send packet"); // send it to COSMOS
+
+        // Create the original 15-byte EPS telemetry packet.
+        let pkt = pack_eps(counter, sim_time, frame);
+
+        // Reserve a unique 12-byte nonce.
+        let nonce = eps_nonce_manager.next_nonce().expect("Failed to reserve EPS nonce");
+
+        // Build the authenticated downlink header.
+        let header = [ DOWNLINK_MARKER,VERSION,DOWNLINK_DIRECTION ];
+
+        // Encrypt the EPS packet.
+        let encrypted_pkt = encrypt_packet(
+            &pkt,
+            &EPS_KEY,
+            &header,
+            &nonce,
+        ).expect("Failed to encrypt EPS telemetry");
+
+        // Send encrypted telemetry to OpenC3.
+        sock.send_to(&encrypted_pkt, DEST)
+            .expect("Failed to send encrypted EPS telemetry");
+
+        println!(
+            "Encrypted EPS packet sent: {} bytes",
+            encrypted_pkt.len()
+        );
+
+
+       // println!("sent #{counter} t={sim_time}s {:?}", frame);    // show what went out
         counter = counter.wrapping_add(1);                       // +1, rolls back to 0 after 65535
         sleep(Duration::from_secs(1));                           // wait 1 second
     }
