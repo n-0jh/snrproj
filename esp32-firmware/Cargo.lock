@@ -994,6 +994,7 @@ dependencies = [
  "log",
  "portable-atomic",
  "riscv",
+ "rtos-trace",
  "xtensa-lx",
 ]
 
@@ -1675,6 +1676,7 @@ dependencies = [
  "esp-radio",
  "esp-rtos",
  "log",
+ "rtos-trace",
  "smoltcp 0.14.0",
  "static_cell",
 ]
@@ -1766,6 +1768,12 @@ dependencies = [
  "libc",
  "rustversion",
 ]
+
+[[package]]
+name = "rtos-trace"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99cc14adb36141b2237d4f81354366beb7b6bd5153d5772f1dfc14846d6d499f"
 
 [[package]]
 name = "rustversion"

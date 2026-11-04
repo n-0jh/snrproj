@@ -75,8 +75,10 @@ TELEMETRY RASCAL ADCS BIG_ENDIAN "ADCS housekeeping from adcs_gen"
     STATE POINTING 2
 
 TELEMETRY RASCAL ESP32 BIG_ENDIAN "ESP32 onboard housekeeping telemetry"
-  # Keyword         Name       BitSize   Type  ID     Description
-  APPEND_ID_ITEM    PKT_ID       8       UINT  5     "Packet ID"
-  APPEND_ITEM       COUNTER     16       UINT        "Telemetry packet counter"
-  APPEND_ITEM       UPTIME      32       UINT        "ESP32 uptime in seconds"
+  # Keyword      Name          BitSize Type  ID Description
+  APPEND_ID_ITEM PKT_ID        8       UINT  5  "Packet ID"
+  APPEND_ITEM    COUNTER       16      UINT     "Telemetry packet counter"
+  APPEND_ITEM    UPTIME        32      UINT     "ESP32 uptime in seconds"
     UNITS seconds s
+  APPEND_ITEM CPU_USAGE 8 UINT "Estimated CPU 0 utilization"
+    UNITS percent pct

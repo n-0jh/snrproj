@@ -9,6 +9,9 @@ use embassy_net::{
     udp::{PacketMetadata, UdpSocket},
 };
 use embassy_time::{Duration, Timer};
+use esp_hal::time::Instant;
+#[path = "../cpu_usage.rs"]
+mod cpu_usage;
 
 use esp_hal::clock::CpuClock;
 use esp_hal::rng::Rng;
@@ -24,7 +27,7 @@ use log::{error, info};
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
 
-const GROUND_STATION_IP: [u8; 4] = [172, 20, 10, 2];
+const GROUND_STATION_IP: [u8; 4] = [192, 168, 1, 180];
 const TELEMETRY_PORT: u16 = 6900;
 
 // C3 sends encrypted commands to this port (rascal_cmd_port in the plugin)
@@ -34,6 +37,7 @@ const COMMAND_PORT: u16 = 6901;
 #[path = "../command.rs"]
 mod command;
 use command::SecureLink;
+
 
 
 #[panic_handler]
@@ -60,6 +64,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // Start asynchronous runtime
     let timg0 = TimerGroup::new(peripherals.TIMG0);
+
     esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
 
     info!("RASCAL ESP32 initialized!");
@@ -138,14 +143,40 @@ async fn main(spawner: Spawner) -> ! {
     info!("UDP telemetry socket initialized!");
     // Main application loop
     let mut uptime: u32 = 0;
+    let mut last_sample = Instant::now();
+    
 
     loop {
         Timer::after(Duration::from_secs(1)).await;
 
         uptime = uptime.wrapping_add(1);
+        // Calculate CPU utilization
+        let now = Instant::now();
 
+        let elapsed_us = now.duration_since_epoch().as_micros()
+        - last_sample.duration_since_epoch().as_micros();
+        last_sample = now;
+        
+        let idle_us = cpu_usage::take_idle_us() as u64; 
+
+        let busy_us = elapsed_us.saturating_sub(idle_us);
+
+        info!(
+        "CPU timing: elapsed={} us, idle={} us, busy={} us",
+        elapsed_us,
+        idle_us,
+        busy_us
+        );
+
+        let cpu_usage_percent: u8 = if elapsed_us > 0 {
+            ((busy_us * 100) / elapsed_us).min(100) as u8
+        } else {
+            0
+        };
+
+        info!("CPU 0 utilization estimate: {}%", cpu_usage_percent);
         // Construct ESP32 telemetry packet
-        let mut packet = [0u8; 7];
+        let mut packet = [0u8; 8];
 
         // Packet ID: ESP32 = 5
         packet[0] = 5;
@@ -159,6 +190,8 @@ async fn main(spawner: Spawner) -> ! {
         let uptime_bytes = uptime.to_be_bytes();
 
         packet[3..7].copy_from_slice(&uptime_bytes);
+        // CPU 0 utilization percentage
+        packet[7] = cpu_usage_percent;
 
         // Ground station destination
         let destination = (
