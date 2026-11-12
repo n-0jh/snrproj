@@ -11,8 +11,10 @@ cosmos-project/plugins/*.gem
 
 #counter files
 /satellite/nonce_counters/
+/cosmos-project/plugins/rascal_state/
 
-
+#Replay state
+/satellite/replay_state/
 
 # rust (cargo)
 mock_lora_sim/target/
