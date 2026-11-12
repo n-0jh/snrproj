@@ -1,7 +1,7 @@
 //REAL
 use std::net::UdpSocket; 
 use std::path::Path;
-use secure_link::{encrypt_packet, decrypt_packet,NonceManager}; //outside function defined in secure_link folder 
+use secure_link::{encrypt_packet, decrypt_packet,NonceManager,check_and_persist_replay}; //outside function defined in secure_link folder 
 
 const CMD_PORT: &str = "0.0.0.0:6901";    // UDP port used to receive commands on satellite   0.0.0.0 means the program accepts packets arriving on any of its local IPv4 interfaces.
 const ACK_DEST: &str = "127.0.0.1:6900";   // UDP port used to receive commands on ground station
@@ -15,6 +15,10 @@ const VERSION: u8 = 1;
 const COMMAND_DIRECTION: u8 = 1; //Ground station to Sattellite
 const ACK_DIRECTION: u8 = 2;
 const ACK_MARKER: u8 = 0xA5;
+
+const REPLAY_STATE_PATH: &str = "../replay_state/command_replay.bin";
+const REPLAY_LOCK_PATH: &str = "../replay_state/command_replay.lock";
+
 
 
 
@@ -60,6 +64,8 @@ fn main() -> std::io::Result<()> //  return can mean the function can finish suc
 
         let packet = &buffer[..bytes_received]; // store bytes from index 0 and stop before index bytes_received. We only want the used bytes in our packet
 
+
+
         if bytes_received == 0 {
             println!("Empty packet received");
             continue;
@@ -90,6 +96,58 @@ fn main() -> std::io::Result<()> //  return can mean the function can finish suc
       
         let command_id = plaintext[0]; //Extract the command id
         let sequence_number = plaintext[1]; // Extract sequence_number
+
+
+
+         // Extract the authenticated command nonce.
+        let nonce = &packet[2..14];
+
+        // The first four nonce bytes identify OpenC3's command source.
+        if nonce[..4] != [0, 0, 0, 4] {
+            println!("Command rejected: invalid nonce source prefix");
+            continue;
+        }
+
+        // The last eight nonce bytes contain the counter.
+        let mut counter_bytes = [0u8; 8];
+        counter_bytes.copy_from_slice(&nonce[4..12]);
+
+        let counter = u64::from_be_bytes(counter_bytes);
+        println!("Received command nonce counter: {}", counter);
+
+
+
+
+                // Only supported commands should consume replay counters.
+        if command_id != NOOP_CMD_ID {
+            println!("Unknown command ID: {}", command_id);
+            continue;
+        }
+
+        // Check and persist the replay counter before executing the command.
+        match check_and_persist_replay(
+            Path::new(REPLAY_STATE_PATH),
+            Path::new(REPLAY_LOCK_PATH),
+            counter,
+        ) {
+            Ok(true) => {
+                println!("Replay check passed for counter {}", counter);
+            }
+
+            Ok(false) => {
+                println!("Replay rejected: duplicate or outdated counter {}", counter);
+                continue;
+            }
+
+            Err(error) => {
+                println!("Replay-state error: {}", error);
+                continue;
+            }
+        }
+
+
+
+
 
 
         match command_id   // It is similar to a switch statement in C.

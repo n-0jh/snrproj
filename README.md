@@ -172,4 +172,36 @@ Then run this command --> [System.IO.File]::WriteAllBytes(
 )
 
 
+## Create counter director for commands being sent from c3 cosomos 
+1. cd to \snrproj
+2. New-Item -ItemType Directory -Force -Path .\cosmos-project\plugins\rascal_state
+3. Type full command : @'
+path = "/plugins/rascal_state/command_counter.bin"
 
+File.open(path, File::WRONLY | File::CREAT | File::EXCL | File::BINARY, 0600) do |file|
+  file.write([1].pack("Q>"))
+  file.flush
+  file.fsync
+end
+
+puts "Counter initialized"
+'@ | docker exec -i cosmos-project-openc3-operator-1 ruby -
+
+## Replay Protection (64 bit Slidng window ) Info Below
+highest_counter: The largest authenticated command nonce counter we've accepted.
+
+seen_bitmap: A 64-bit integer that records which counters within the window have already been received.
+een_bitmap: u64
+
+Stores 64 bits, where each bit represents whether a particular counter has already been accepted.
+- Bit 0 represents highest_counter.
+- Bit 1 represents highest_counter - 1.
+- Bit 2 represents highest_counter - 2.
+- And so on.
+
+
+## How Create your own replay-State Directory 
+1. From your satellite directory, run: New-Item -ItemType Directory -Force -Path .\replay_state
+
+## How to create  replay State files
+To Run Replay file initializer use this command from the satellite directory  --> cargo run -p secure_link --example init_replay

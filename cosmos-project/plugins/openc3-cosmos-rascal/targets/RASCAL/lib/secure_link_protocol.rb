@@ -24,20 +24,26 @@ module OpenC3
 
 
     def initialize(allow_empty_data = nil)
-      super(allow_empty_data)  # invokes the parent class's constructor
-      # Temporary 32-byte development key.
-      # Rust must use the same key to decrypt commands.
-      @command_key = [
-        '00112233445566778899aabbccddeeff' \
-        '00112233445566778899aabbccddeeff'
-      ].pack('H*')
 
-      @downlink_key = [
-        '3CA7BD16E145D141CCCC28BC2C012B18047D7FC1C02FE43EEB17E6727756A6D8'
-       ].pack('H*')
+        super(allow_empty_data)  # invokes the parent class's constructor
+        # Temporary 32-byte development key.
+        # Rust must use the same key to decrypt commands.
+        @command_key = [
+            '00112233445566778899aabbccddeeff' \
+            '00112233445566778899aabbccddeeff'
+        ].pack('H*')
 
+        @downlink_key = [
+            '3CA7BD16E145D141CCCC28BC2C012B18047D7FC1C02FE43EEB17E6727756A6D8'
+        ].pack('H*')
 
+        # Persistent command nonce counter configuration.
+        @command_nonce_prefix = [0, 0, 0, 4].pack('C4')
 
+        @command_counter_path = ENV.fetch(
+        'RASCAL_COMMAND_COUNTER_PATH',
+        '/plugins/rascal_state/command_counter.bin'
+        )
 
     end
 
@@ -187,7 +193,10 @@ module OpenC3
       end
 
       # Create a fresh 12-byte nonce for this encryption.
-      nonce = SecureRandom.random_bytes(12)
+      #nonce = SecureRandom.random_bytes(12)
+
+      # Reserve a unique nonce using the persistent command counter.
+      nonce = next_command_nonce
 
       # Header: protocol version + message direction.
       header = [VERSION, COMMAND_DIRECTION].pack('CC') # Ruby's pack() converts an array of values into a binary string.Since we have two C characters, Ruby packs two values into two bytes.
@@ -216,5 +225,32 @@ module OpenC3
      # Return the encrypted packet to OpenC3 for UDP transmission.
       return packet,extra
     end
-  end
-end
+
+
+    def next_command_nonce
+      File.open(@command_counter_path, File::RDWR | File::BINARY) do |file|
+        file.flock(File::LOCK_EX)
+
+        begin
+          raise "Invalid counter file size" unless file.size == 8
+          file.rewind
+          counter = file.read(8).unpack1('Q>') #This reads an unsigned 64-bit integer in big-endian format, matching the counter layout used by your Rust nonce manager.
+          raise "Command nonce counter exhausted" if counter == 0xFFFFFFFFFFFFFFFF
+          next_counter = counter + 1
+
+          file.rewind
+          file.write([next_counter].pack('Q>'))
+          file.flush
+          file.fsync
+          @command_nonce_prefix + [counter].pack('Q>')
+        ensure
+          file.flock(File::LOCK_UN)
+        end
+      end
+    end
+
+  end  # Closes SecureLinkProtocol class
+end    # Closes OpenC3 module
+
+
+
