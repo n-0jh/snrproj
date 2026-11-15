@@ -368,7 +368,6 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "fs2",
- "rand 0.8.8",
 ]
 
 [[package]]
