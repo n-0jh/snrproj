@@ -3,13 +3,17 @@ name = "secure_link"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-aes-gcm = "0.11.1"
-fs2 = "0.4.3"
-rand = "0.8"
+[features]
+# `std` (default): file-backed NonceManager + replay persistence for the satellite programs.
+# Build with `default-features = false` for the no_std ESP32 firmware.
+default = ["std"]
+std = ["dep:fs2"]
 
+[dependencies]
+aes-gcm = { version = "0.11.1", default-features = false, features = ["aes", "alloc"] }
+fs2 = { version = "0.4.3", optional = true }
 
 [[example]]
 name = "init_replay"
 path = "File_initializer/init_replay.rs"
-
+required-features = ["std"]

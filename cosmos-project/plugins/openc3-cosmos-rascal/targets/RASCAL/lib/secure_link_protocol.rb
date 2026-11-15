@@ -52,8 +52,8 @@ module OpenC3
 
         first_byte = data.getbyte(0)
 
-        # Existing HEALTH and packet ID 5 are plaintext.
-        if first_byte == 1 || first_byte == 5
+        # Existing HEALTH and packet is plaintext. ID is encrypted now.
+        if first_byte == 1
             return data, extra
         end
 
@@ -134,7 +134,18 @@ module OpenC3
         packet_id = plaintext.getbyte(0)
 
         case packet_id
-            
+            when 5
+                # ESP32 housekeeping packet: 8 bytes, starting with PKT_ID=5.
+            if plaintext.bytesize != 8
+                OpenC3::Logger.warn(
+                    "[RASCAL SECURITY] Invalid decrypted ESP32 length"
+                )
+                return nil, extra
+            end
+
+                OpenC3::Logger.info(
+                    "[RASCAL SECURITY] ESP32 authenticated: #{plaintext.unpack1('H*')}"
+                )
             when 4
             # ADCS packet: 30 bytes, starting with PKT_ID=4.
             if plaintext.bytesize != 30

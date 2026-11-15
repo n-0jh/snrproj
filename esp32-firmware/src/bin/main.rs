@@ -26,17 +26,26 @@ use log::{error, info};
 
 const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
-
-const GROUND_STATION_IP: [u8; 4] = [192, 168, 1, 180];
+// NOTE FOR YOU GUYS: change on your device
+const GROUND_STATION_IP: [u8; 4] = [172, 20, 10, 2];
 const TELEMETRY_PORT: u16 = 6900;
 
 // C3 sends encrypted commands to this port (rascal_cmd_port in the plugin)
 const COMMAND_PORT: u16 = 6901;
 
+// Flash offset for the replay state (2 x 4 KiB sectors). 0x9000 = default `nvs` partition,
+// which this firmware does not otherwise use.
+const REPLAY_FLASH_BASE: u32 = 0x9000;
+
 // encrypted command decode + ACK builder
-#[path = "../command.rs"]
-mod command;
-use command::SecureLink;
+#[path = "../keys.rs"] mod keys;
+#[path = "../downlink.rs"] mod downlink;
+#[path = "../replay_store.rs"] mod replay_store;
+use replay_store::FlashReplayStore;
+use secure_link::command::process_command;
+use secure_link::counter::NonceCounter;
+use esp_storage::FlashStorage;
+use downlink::TelemetryEncryptor;
 
 
 
@@ -119,7 +128,7 @@ async fn main(spawner: Spawner) -> ! {
 
 
     // start the encrypted command receiver (has its own UDP socket on COMMAND_PORT)
-    spawner.spawn(command_task(stack).unwrap());
+    spawner.spawn(command_task(stack, peripherals.FLASH).unwrap());
 
     // Allocate UDP receive/transmit buffers
     let mut rx_meta = [PacketMetadata::EMPTY; 1];
@@ -139,6 +148,8 @@ async fn main(spawner: Spawner) -> ! {
 
     // Bind ESP32 to a local UDP source port
     socket.bind(6902).expect("Failed to bind UDP socket");
+
+    let mut telemetry_crypto = TelemetryEncryptor::new(random_counter_start(&rng));
 
     info!("UDP telemetry socket initialized!");
     // Main application loop
@@ -198,9 +209,16 @@ async fn main(spawner: Spawner) -> ! {
             embassy_net::Ipv4Address::from_octets(GROUND_STATION_IP),
             TELEMETRY_PORT,
         );
+        let encrypted_packet = match telemetry_crypto.encrypt(&packet) {
+            Ok(p) => p,
+            Err(e) => {
+                error!("Telemetry encryption failed: {:?}", e);
+                continue;
+            }
+        };
 
         // Transmit UDP telemetry
-        match socket.send_to(&packet, destination).await {
+        match socket.send_to(&encrypted_packet, destination).await {
             Ok(()) => {
                 info!("ESP32 telemetry sent: uptime = {} seconds", uptime);
             }
@@ -210,12 +228,22 @@ async fn main(spawner: Spawner) -> ! {
         }
     }
 }
+   
+// 64-bit random starting point for a RAM nonce counter (two 32-bit RNG reads)
+fn random_counter_start(rng: &Rng) -> u64 {
+    ((rng.random() as u64) << 32) | (rng.random() as u64)
+}
 
 // receives encrypted commands from C3, replies with an encrypted ACK
 #[embassy_executor::task]
-async fn command_task(stack: Stack<'static>) {
-    let link = SecureLink::new();
+async fn command_task(stack: Stack<'static>, flash: esp_hal::peripherals::FLASH<'static>) {
     let rng = Rng::new();
+
+    // Replay state lives in flash (2 sectors at the start of the default `nvs` partition,
+    // 0x9000), so a reboot cannot be used to replay an old command.
+    let mut replay_store = FlashReplayStore::new(FlashStorage::new(flash), REPLAY_FLASH_BASE);
+    // ACK nonces: prefix 6, random 64-bit start each boot.
+    let mut ack_nonces = NonceCounter::with_start(downlink::ESP32_ACK_PREFIX, random_counter_start(&rng));
 
     let mut rx_meta = [PacketMetadata::EMPTY; 4];
     let mut rx_buffer = [0u8; 512];
@@ -248,13 +276,14 @@ async fn command_task(stack: Stack<'static>) {
 
         info!("Received {} bytes from {}", len, meta.endpoint);
 
-        // Fresh random 12-byte nonce for the ACK
-        let mut nonce = [0u8; command::NONCE_LEN];
-        for chunk in nonce.chunks_mut(4) {
-            chunk.copy_from_slice(&rng.random().to_be_bytes());
-        }
 
-        match link.handle(&buf[..len], nonce) {
+        match process_command(
+            &buf[..len],
+            &keys::COMMAND_KEY,
+            &keys::DOWNLINK_KEY, // ACKs use the downlink key (same value as uplink_listener ACK_KEY)
+            &mut replay_store,
+            &mut ack_nonces,
+        ) {
             Ok((seq, ack)) => {
                 info!("AES-GCM authentication successful");
                 info!("NOOP received with sequence number {}", seq);

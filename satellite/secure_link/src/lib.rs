@@ -1,15 +1,28 @@
+#![cfg_attr(not(feature = "std"),no_std)]
+
+
+extern crate alloc;
+
 use aes_gcm::{aead::{Aead, KeyInit, Payload}, Aes256Gcm, Nonce};
+use alloc::vec::Vec;
+
+pub mod command;
+pub mod counter;
 //use rand::{rngs::OsRng, RngCore};
 
+#[cfg(feature = "std")]
 use std::fs::{self,File, OpenOptions};
+#[cfg(feature = "std")]
 use std::io::{Read, Seek, SeekFrom, Write};
+#[cfg(feature = "std")]
 use std::path::Path;
+#[cfg(feature = "std")]
 use fs2::FileExt;
 
 
 // 12-byte nonce + 16-byte tag
-const NONCE_LEN: usize = 12;
-const TAG_LEN: usize = 16;
+pub const NONCE_LEN: usize = 12;
+pub const TAG_LEN: usize = 16;
 
 #[derive(Debug)]
 pub enum SecureLinkError 
@@ -18,17 +31,20 @@ pub enum SecureLinkError
     InvalidHeader,
     AuthenticationFailed,
     EncryptionFailed,
+    #[cfg(feature = "std")]
     Io(std::io::Error),
     CounterExhausted,
 }
 
 
+#[cfg(feature = "std")]
 pub struct NonceManager
 {
     source_prefix: [u8; 4],
     counter_file: File //This field stores a Rust File object representing an open counter file on your computer.The important advantage of storing the counter in a file is that the counter can survive when the Rust program stops and restarts.
 }
 
+#[cfg(feature = "std")]
 impl NonceManager // functions for the NonceManager structure 
 {
     pub fn new( source_prefix: [u8; 4], counter_path: &Path ) -> Result<Self, SecureLinkError> //constructor-like function in Rust.
@@ -121,9 +137,6 @@ impl NonceManager // functions for the NonceManager structure
         Ok(nonce)
     }
 }
-
-
-
 
 
 // Packet format: [authenticated header][12-byte nonce][ciphertext][16-byte tag].
@@ -331,6 +344,7 @@ impl ReplayWindow
 
 
 
+    #[cfg(feature = "std")]
     pub fn save_to_file(&self, path: &Path) -> std::io::Result<()>
     {
         // Convert the replay window into 17 bytes.
@@ -372,6 +386,7 @@ impl ReplayWindow
         Ok(())
     }
 
+    #[cfg(feature = "std")]
     pub fn load_from_file(path: &Path) -> std::io::Result<Self> 
     {
         // Open the existing replay-state file.
@@ -392,7 +407,7 @@ impl ReplayWindow
         Ok(window)
     }
 }
-
+#[cfg(feature = "std")]
 pub fn lock_replay_state(lock_path: &Path) -> std::io::Result<File> 
 {
     // Open or create the dedicated lock file.
@@ -411,7 +426,7 @@ pub fn lock_replay_state(lock_path: &Path) -> std::io::Result<File>
 
 
 
-
+#[cfg(feature = "std")]
 pub fn check_and_persist_replay( state_path: &Path, lock_path: &Path,counter: u64 ) -> std::io::Result<bool> 
 {
     // Step 1: Acquire exclusive access.
@@ -438,6 +453,7 @@ pub fn check_and_persist_replay( state_path: &Path, lock_path: &Path,counter: u6
 
 
 //Add an explicit initialization function// Important: This function must only be called during an explicitly authorized first-time setup, such as provisioning a new command key or key epoch. It must not be called automatically whenever the satellite starts.//
+#[cfg(feature = "std")]
 pub fn initialize_replay_state(
     state_path: &Path,
     lock_path: &Path,
@@ -483,7 +499,7 @@ pub fn initialize_replay_state(
 
 
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
 
@@ -928,10 +944,3 @@ mod tests {
     }
 
 }
-
-
-
-
-
-
-

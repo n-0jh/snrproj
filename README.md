@@ -7,7 +7,8 @@
   * `eps_gen` - sends simulated EPS (power system) telemetry
   * `adcs_gen` - sends simulated ADCS (attitude) telemetry
   * `uplink_listener` - receives encrypted commands from OpenC3 and sends an encrypted ACK back
-
+  * `secure_link` - shared encryption, replay protection and command handling (used by the satellite programs and the ESP32)
+  * **esp32-firmware/** - Rust firmware for the ESP32 (stand in flight computer), sends encrypted telemetry and receives encrypted commands over Wi-Fi
 
 ## prerequisites
 install the following
@@ -117,6 +118,31 @@ cargo run --release -p uplink_listener
 4. in OpenC3 check the **ACK** packet (Packet Viewer > RASCAL > ACK, or CmdTlmServer > Packets). Its `SEQ_NUM` should match the command
  
 You can run `uplink_listener` and a telemetry sender at the same time.
+
+## ESP32 firmware
+the ESP32 runs the same secure link as the satellite programs. it uses `satellite/secure_link` (without std), so there is one `command.rs` for both.
+
+* `satellite/secure_link/src/command.rs` - shared command handling: authenticate, check command, replay check, build encrypted ACK
+* `satellite/secure_link/src/counter.rs` - in memory nonce counter (no files needed, used by the ESP32)
+* `esp32-firmware/src/replay_store.rs` - saves the replay window in flash so it survives a reboot
+
+build and run (from esp32-firmware using hotspot):
+```bash
+source ~/export-esp.sh
+export SSID=your_wifi 
+export PASSWORD=your_password
+cargo run --release
+```
+
+NOTE: `GROUND_STATION_IP` in `src/bin/main.rs` must be your computer's IP, and `rascal_cmd_host` in the plugin must be the ESP32's IP (printed in the ESP32 log at boot)
+
+to test replay protection:
+1. send a NOOP from OpenC3, the ESP32 prints `NOOP received` and `Encrypted ACK sent`
+2. copy the hex from the OpenC3 message log line `[RASCAL SECURITY] Encrypted packet: ...`
+3. send those same bytes again to the ESP32 on UDP port 6901
+4. the ESP32 prints `Command rejected: Replay(N)` and sends no ACK. this still happens after resetting the ESP32
+
+NOTE: the replay state is stored in flash at 0x9000 (2 sectors). If you reset the OpenC3 command counter, also clear it with `espflash erase-region 0x9000 0x2000` or new commands will be rejected as replays
 
 ## packet format
 big-endian, once per second.

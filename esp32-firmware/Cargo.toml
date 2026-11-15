@@ -59,6 +59,11 @@ smoltcp = { version = "0.14.0", default-features = false, features = [
   "socket-udp",
 ] }
 aes-gcm = { version = "0.11.1", default-features = false, features = ["aes", "alloc"] }
+# Shared with the satellite programs: encrypt/decrypt, ReplayWindow, process_command (no_std build)
+secure_link = { path = "../satellite/secure_link", default-features = false }
+# Flash storage for the replay state (M11)
+esp-storage = { version = "0.10.0", features = ["esp32", "embedded-storage"] }
+embedded-storage = "0.3"
 critical-section = "1.2.0"
 static_cell      = "2.1.1"
 
